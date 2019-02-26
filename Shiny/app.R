@@ -671,7 +671,12 @@ server <- function(input, output, session) {
 		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
 			(input$x1 != input$y), (input$x2 != input$y))
 		data <- df() 
-		data	<-	data[!is.na(data[input$y]), c(input$y, input$x1, input$x2, input$cov)] # keep only cases with a y value
+		
+		# keep only cases with values on all variables
+		data	<-	data[ , c(input$y, input$x1, input$x2, input$cov)]
+		data <- data[complete.cases(data), ]
+		
+
 		if (input$std.x1 == "standardize") {
 			data[,input$x1] <- c(scale(data[,input$x1]))
 		}  else {
@@ -1052,11 +1057,11 @@ server <- function(input, output, session) {
 				jnmx1.perc <- jnmx1.prop*100
 				jnmx1.perc <- format(round(jnmx1.perc, digits = 2), nsmall = 2)
 				if (jnmx1.inside() == FALSE & !is.na(jnmx1.1()) & !is.na(jnmx1.2())) { # two ROS (high and low) 
-					jnmx1.text <- paste0("The relationship between ", input$x1, " and ", input$y,
-						" is significantly ", jnmx1.sum[1], " when ", input$x2,
+					jnmx1.text <- paste0("The relationship between ", input$x2, " and ", input$y,
+						" is significantly ", jnmx1.sum[1], " when ", input$x1,
 						jnmx1.sum[2], jnmx1.sum[3], jnmx1.sum[15], " and", jnmx1.sum[4], jnmx1.sum[5], jnmx1.sum[16],
 						" (slope estimate range: = ", jnmx1.sum[6], " to ", jnmx1.sum[7], ") and significantly ", jnmx1.sum[8], " when ",
-						input$x2, jnmx1.sum[9], jnmx1.sum[10],jnmx1.sum[17], " and ", jnmx1.sum[11], jnmx1.sum[12], jnmx1.sum[18],
+						input$x1, jnmx1.sum[9], jnmx1.sum[10],jnmx1.sum[17], " and ", jnmx1.sum[11], jnmx1.sum[12], jnmx1.sum[18],
 						" (slope estimate range: ", jnmx1.sum[13], " to ", jnmx1.sum[14], 
 						"). These regions of significance include ", jnmx1.perc, "% of the sample. ")
 				} else {
