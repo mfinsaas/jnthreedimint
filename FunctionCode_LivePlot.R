@@ -20,8 +20,7 @@ plot3dInt <- function(file.loc.name, 	plot.name,
 	jn.gradient.mx1 = c("on", "off"),
 	jn.gradient.mx2 = c("on", "off"),	
 	crossover.x1mod = c("on", "off"), 
-	crossover.x2mod = c("on", "off"),
-) {
+	crossover.x2mod = c("on", "off")) {
 	
 	# packages required
 	require(plotly)
@@ -74,6 +73,7 @@ plot3dInt <- function(file.loc.name, 	plot.name,
 	
 	# descriptives ------------------------------------------------------------
 	ds <- describe(df)[c("n","mean","sd","median","min","max","skew","kurtosis")]
+	print("Descriptives")
 	print(ds)
 	
 	# scale predictors and outcome --------------------------------------------
@@ -118,6 +118,7 @@ plot3dInt <- function(file.loc.name, 	plot.name,
 	# fit regression model ----------------
 	mod <- lm(y ~ . + x1 * x2, data = df)
 	mod.summary <- summary(mod)
+	print("Regression Model Summary")
 	print(mod.summary)
 	
 	if(mod.summary$coefficients[nrow(mod.summary$coefficients), 4] < 0.05) {
@@ -143,10 +144,11 @@ plot3dInt <- function(file.loc.name, 	plot.name,
 	# when x1 is mod ------------------------------------------------------
 	jn.mx1 <- johnson_neyman(mod, pred = x2, modx = x1, 
 		mod.range = c(minx1, maxx1), alpha = 0.05, plot = FALSE)
+	print("Johnson Neyman Results When X1 is Moderator")
 	print(jn.mx1)
 	
 	ss.mx1 <- sim_slopes(mod, pred = x2, modx = x1)
-	print(ss.mx1)
+	# print(ss.mx1)
 	
 	# save jn values if within mod range
 	if(jn.mx1$bounds[1] >= minx1 & jn.mx1$bounds[1] <= maxx1) {
@@ -164,6 +166,7 @@ plot3dInt <- function(file.loc.name, 	plot.name,
 	# when x2 is mod ------------------------------------------------------
 	jn.mx2 <- johnson_neyman(mod, pred = x1, modx = x2, 
 		mod.range = c(minx2, maxx2), alpha = 0.05, plot = FALSE)
+	print("Johnson-Neyman Results When X2 is Moderator")
 	print(jn.mx2)
 	
 	# save jn values if within mod range

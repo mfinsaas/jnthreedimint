@@ -6,7 +6,7 @@
 # make a free RPubs account. 
 
 # Here is an input code example. Update the arguments in quotations and copy and paste it to run in R to produce a live plot
-plot3dInt(file.loc.name = "simulateddata.final.testing.csv", # Data file name. Include extension. Must be .csv, .xls, or .sav. If the dataset is not in the same location at the R project you will need to also supply a file path
+plot3dInt(file.loc.name = "simulateddata.final.csv", # Data file name. Include extension. Must be .csv, .xls, or .sav. If the dataset is not in the same location at the R project you will need to also supply a file path
 	plot.name = "Life Stress x Neuroticism Predicting Depression", # Plot name and name of file that will be saved to your computer. 
 	y.var = "Depression.c", # Outcome variable. This should match the variable name in your dataset exactly, including capitalization.
 	y.name = "Depression", # Name of outcome variable to appear in plot. This name can be anything you want it to be. It will appear on the Y axis in the plot.
@@ -14,7 +14,7 @@ plot3dInt(file.loc.name = "simulateddata.final.testing.csv", # Data file name. I
 	x1.name = "Life Stress", # Name of outcome variable to appear in plot. This name can be anything you want it to be. It will appear on the X/Z axis in the plot.
 	x2.var = "Neuroticism.c", # X2 predictor variable. This should match the variable name in your dataset exactly, including capitalization.
 	x2.name = "Neuroticism", # Name of outcome variable to appear in plot. This name can be anything you want it to be. It will appear on the X/Z axis in the plot.
-	cov = c("Sex.c", "Age.c"), # Covariates. Multiple covariates accepted. These should match the variable name in your dataset exactly, including capitalization.
+	cov = c("Sex.c", "Age.c"), # Covariates. Multiple covariates accepted. If you don't have any, write NULL (with no quotations). These should match the variable name in your dataset exactly, including capitalization.
 	std.y = "center", # Transform Y variable. Other options are: "standardize" and "raw".
 	std.x1 = "center", # Transform X1 variable. Other options are: "standardize" and "raw".
 	std.x2 = "center", # Transform X2 variable. Other options are: "standardize" and "raw".
