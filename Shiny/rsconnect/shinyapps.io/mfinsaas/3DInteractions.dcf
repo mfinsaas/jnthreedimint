@@ -5,8 +5,8 @@ account: mfinsaas
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 715782
-bundleId: 1875489
+bundleId: 1901645
 url: https://mfinsaas.shinyapps.io/3DInteractions/
-when: 1550123095.14874
+when: 1551210710.74537
 asMultiple: FALSE
 asStatic: FALSE

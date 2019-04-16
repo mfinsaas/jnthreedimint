@@ -544,8 +544,6 @@ ui <- fluidPage(
 			hr(),
 			selectInput(inputId = "cov", 
 				label = "Select Covariate(s) (If none, leave blank)", choices = "--", multiple = TRUE),
-			htmlOutput(outputId = "click3D"),
-			br(),
 			htmlOutput(outputId = "plotfeatTitle"),
 			fluidRow(
 				column(4, uiOutput(outputId = "scatterUI")),
@@ -574,8 +572,6 @@ ui <- fluidPage(
 		# main panel --------------------------------------------------------------
 		mainPanel(width = 9,
 			navbarPage(title = "",
-				tabPanel(title = "How To",
-					htmlOutput(outputId = "guide")),
 				tabPanel(title = "3D Plot", 
 					fluidRow(
 						column(7,
@@ -623,117 +619,17 @@ ui <- fluidPage(
 							fluidRow(
 								column(4, verbatimTextOutput(outputId = "jnmx2Info")),
 								column(8, plotOutput(outputId = "jnmx2.matlot")))))),
-				tabPanel(title = "Descriptives", 
-					htmlOutput(outputId = "descTitle"),
-					tableOutput(outputId = "desc"),
-					htmlOutput(outputId = "desc.stdTitle"),
-					tableOutput(outputId = "desc.std")),
-				tabPanel(title = "Raw Data", DT::dataTableOutput(outputId = "rawdata")),
-				tabPanel(title = "Code for Saving Live Plot", 
-					htmlOutput(outputId = "codetitle1"))))
+				navbarMenu(title = "More",
+					tabPanel(title = "Descriptives", 
+						htmlOutput(outputId = "descTitle"),
+						tableOutput(outputId = "desc"),
+						htmlOutput(outputId = "desc.stdTitle"),
+						tableOutput(outputId = "desc.std")),
+					tabPanel(title = "Raw Data", DT::dataTableOutput(outputId = "rawdata")))))
 	)
 )
 
 server <- function(input, output, session) {
-	output$guide <- renderUI(
-		HTML(paste(
-			"<div style='font-size: 13px'> 
-			<h4> Welcome </h4>
-			This visualization tool represents continuous by continuous interactions as a regression plane in 
-			3D space. It also depicts regions of significance from the Johnon-Neyman technique 
-			on the regression plane. You can see an example of the type of plot produced <a href=“http://rpubs.com/sbu_mfinsaas/Figure8”> here</a>. 
-			<h5> Upload a Datafile </h5>
-			 This data file must have unique variable names at the top of the file, should not contain missing 
-			data indicators (but blanks are okay; the program handles missing data using listwise deletion based 
-			on variables in the model), and can be an Excel (.xls), comma-separated (.csv), or SPSS (.sav) file. 
-			In some cases, some of these file types may appear grayed out/unavailable in the file upload window. 
-			To get around this, change your setting in the file upload window to view all file types.
-		  <br> <br>	To upload a file, click the browse button. Once the file has been properly uploaded, the dropdown menus 
-			for the predictors and outcome will automatically populate with the variable names in the file. 
-			<h5> Select Variables for Regression Model </h5>
-			 Select the outcome variable (Y) and the predictors (X1 and X2) that will make up the interaction term
-			by clicking the dropdown buttons and locating the variables in the list. Alternatively, you can delete
-			“--” and type the variable name. You can transform your data by clicking the “Center” or “Standardize” buttons
-			under each variable, or leave the data in the raw form by clicking Raw. To add covariates, click in the
-			text box for a dropdown list or to type the variable names. Covariates are always centered at their means.
-			<br> <br>
-			At this point, the program does not accept squared terms, so you will get a warning if you try to enter
-			the same variable for X1 and X2. It will accept dichotomous or categorical variables, but they will be
-			treated like continuous variables. 
-			<h5> Main Output </h5>
-			You can find this output under the 
-			<b> 3D Plot </b>  tab. 
-			Once you have input the predictor and outcome variables, the program will automatically estimate the 
-			regression model and create a 3D plot with the observed data overlaid as a scatterplot and a regression 
-			plane. Since the program is “reactive,” it updates in real time based on your input without the use of 
-			a “run” button. <br> <br>
-			The model results will appear on the right side of the screen, as well as the output from
-			the Johnson-Neyman analysis and crossover points for each of the predictors acting as the moderator. <br> <br>
-			When
-			a region of significance falls within the observed data, the Johnson-Neyman output will include the values
-			on the moderator that mark the bounds of the region of significance, the range of slope estimates for the 
-			relationship between the primary predictor and outcome within this region, the percentage of cases that 
-			fall within this region, and the observed range of the moderator variable. This output is written using 
-			the names of the variables and in a conversational style. 
-			<h5> Plot Features </h5>
-			At this point, you will also see additional checkboxes appear in the left navigation bar. For all 
-			models, the checkboxes for the scatterplot, regression plane, and 95% confidence interval around the 
-			predicted values will appear. You can add or take away these features on the plot by clicking the 
-			checkboxes. The 95% confidence intervals will appear as semi-opaque planes floating above and below the 
-			regression plane. <br> <br>
-			Which other checkboxes appear below these depend on whether the interaction term is significant and 
-			whether there are regions of significance or crossover points for either predictor that fall within 
-			the observed range of data. If the interaction term is not significant, the user will see a message 
-			stating this, and no additional buttons will appear. If the interaction term is significant, but neither 
-			region of significance or crossover point falls within the range of either predictor, you won't see a message but 
-			again, no additional	checkboxes will appear. <br> <br> 
-			If a region of significance falls within 
-			the range of data, an additional checkbox called “ROS” (for region of significance) will appear under the
-			name of the variable acting as the moderator for this region. Ticking this box will do two things: (1) 
-			shade the corresponding region of significance on the plot and (2) cause another checkbox (“Slope 95% CB”) 
-			to appear. If this new checkbox is checked, the region of significance will be shaded using a gradient that 
-			reflects the width of the 95% confidence band around the slope estimate and a legend for the gradient will 
-			appear. (You can also view the precise confidence band widths at all slope estimates under the Johnson-Neyman 
-			tab.) <br> <br>
-			Finally, if a crossover point falls within the range of data, an additional checkbox (“Crossover”) 
-			will appear; checking this box will add the crossover point to the figure.
-			<h5> Additional Output </h5>
-			You can find marginal effects plots and a table containing the slope estimates and their corresponding 95%
-			confidence bands and p-values at all values of the moderator under the <b> Johnson-Neyman </b> 
-			tab. If you want to know the bounds of the Johnson-Neyman region of significance regardless of whether they
-			fall within the range of observed data, you can find these values next to the marginal effects plots. <br> <br>
-			You
-			can also view descriptive statistics under the <b> Descriptives </b> tab. The first set of descriptives are 
-			for all variables in the dataset in their raw forms. The second set are for the variables in the model with
-			the user-specified standardization option applied. <br> <br>
-			Finally, you can view the raw data under the <b>
-			Raw Data </b> tab; this data can be sorted by any variable. The descriptive and raw data tabs can be useful 
-			for verifying that the data were uploaded correctly.
-			<h5> Saving and Sharing Plots </h5>
-			There are three ways to save and share your plot. The most straightforward but most limited approach is to 
-			use a built-in screen grab function to take still snapshots of the figure in various rotations (i.e., PrtScn 
-			on Windows; Shift + Command + 4 on Macs).<br> <br> 
-			The next most straightforward approach is to use built-in video capture functions to record the screen while 
-			manually rotating the plot; we recommend clicking and dragging above the plot, outside of the portion of the 
-			screen that is being recorded, so that the mouse pointer is not in the recording. Images or recordings created 
-			using these methods can then be saved to the user’s hard drive or stored online using the user’s preferred 
-			online storage method (e.g,. Dropbox, Google Drive). Storing the figures online also allows the user to link 
-			to them in journal submissions. <br> <br> 
-			Finally, the most complex approach, which results in a “live” rotatable version of the plot with a permanent 
-			link, involves four steps: (1) downloading <a href=“https://www.r-project.org”>R</a> and <a href=“https://www.rstudio.com/”>RStudio</a>, 
-			which are both free programs; (2) copying and running the function code located in the <b> Code </b> tab in the
-			RStudio console; (3) copying and running the input code, also located in the <b> Code </b> tab, into the 
-			RStudio console, with the arguments set to user preference; and (4) clicking the blue “Publish” icon in 
-			the RStudio viewer and following the steps to publish to the free service <a href=“http://rpubs.com/”>Rpubs</a>. 
-			This approach works because RStudio supports online publication directly from its viewer window, 
-			whereas this action is not supported directly from Shiny apps. 
-			<h5> Trouble Seeing Plot? </h5>
-			If you do run into trouble viewing the plot (e.g., the text boxes overlap), please (1)
-			double check that you're using Google Chrome, (2) expand your browser window fully,
-			(3) zoom out in your browser window (this option is usually located under View. On Macs: the shortcut is Command -),
-			and (4) use the Plotly options to zoom, pan, and rotate the plot. These options appear at the top right side of the plot when you hover your mouse over the plot. Once you have clicked on zoom, pan, or rotate, click on the plot and hold while moving the mouse side to side or up and down to change the view.
-			If you continue to have problems, please email me at megan.finsaas@stonybrook.edu.<br> <br> <br> <br>"))
-	)
 	
 	#load file
 	df <- reactive({
@@ -780,7 +676,7 @@ server <- function(input, output, session) {
 		data	<-	data[ , c(input$y, input$x1, input$x2, input$cov)]
 		data <- data[complete.cases(data), ]
 		
-		
+
 		if (input$std.x1 == "standardize") {
 			data[,input$x1] <- c(scale(data[,input$x1]))
 		}  else {
@@ -1105,7 +1001,7 @@ server <- function(input, output, session) {
 			jnmx1.slest <- c(jnmx1cb()[jnmx1.1rn(), 2], jnmx1cb()[jnmx1.2rn(), 2]) # slope at jn bounds
 			minmaxx1 <- c(jnmx1cb()[1, 1], jnmx1cb()[nrow(jnmx1cb()), 1]) # min max of mod
 			jnmx1.slestminmax <- c(jnmx1cb()[1, 2], jnmx1cb()[nrow(jnmx1cb()), 2]) # slope at min max of mod
-			obsorjnmx1 <- c(" (minimum observed value)", " (maximum observed value)", " (J-N bound)")
+			obsorjnmx1 <- c(" (minimum observed value)", " (maximum observed value)", " (J-N value)")
 			
 			# formatting
 			jnmx1.val <- format(round(jnmx1.val, digits = 2), nsmall = 2)
@@ -1116,21 +1012,18 @@ server <- function(input, output, session) {
 			# jn text summary
 			if(jnmx1.inside() == FALSE) {
 				if(is.na(jnmx1.1()) & !is.na(jnmx1.2())) { # high band / outside
-					jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.2()))
-					jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
+					jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.2()))[2]
 					jnmx1.sum <- list(jnmx1.sl[2], jnmx1.slest[2], jnmx1.slestminmax[2], jnmx1.sign[1], jnmx1.val[2],
-						jnmx1.sign[2], minmaxx1[2], obsorjnmx1[3], obsorjnmx1[2])
+						jnmx1.sign[2], minmaxx1[2], obsorjnmx1[2], obsorjnmx1[3])
 				} else {
 					if(!is.na(jnmx1.1()) & is.na(jnmx1.2())) { # low band / outside
-						jnmx1.prop <- prop.table(table(df.std()[,input$x1] <= jnmx1.1()))
-						jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
+						jnmx1.prop <- prop.table(table(df.std()[,input$x1] <= jnmx1.1()))[2]
 						jnmx1.sum <- list(jnmx1.sl[1], jnmx1.slestminmax[1], jnmx1.slest[1], jnmx1.sign[1], minmaxx1[1],
 							jnmx1.sign[2], jnmx1.val[1], obsorjnmx1[1], obsorjnmx1[3])
 					} else { # high and low band / outside
 						if(!is.na(jnmx1.1()) & !is.na(jnmx1.2())) {
 							jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.1() & 
-									df.std()[,input$x1] <= jnmx1.2()))
-							jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
+									df.std()[,input$x1] <= jnmx1.2()))[2]
 							jnmx1.sum <- list(jnmx1.sl[1], jnmx1.sign[1], minmaxx1[1], jnmx1.sign[2], jnmx1.val[1], 
 								jnmx1.slestminmax[1], jnmx1.slest[1], 
 								jnmx1.sl[2], jnmx1.sign[1], jnmx1.val[2], jnmx1.sign[2], minmaxx1[2], 
@@ -1141,22 +1034,19 @@ server <- function(input, output, session) {
 			} else { # center band
 				if(!is.na(jnmx1.1()) & !is.na(jnmx1.2())) {
 					jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.1() & 
-							df.std()[,input$x1] <= jnmx1.2()))
-					jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
+							df.std()[,input$x1] <= jnmx1.2()))[2]
 					jnmx1.sum <- list(jnmx1.sl, jnmx1.slest[1], jnmx1.slest[2], 
 						jnmx1.sign[1], jnmx1.val[1], jnmx1.sign[2], minmaxx1[2], obsorjnmx1[3], obsorjnmx1[3])
 				} else {
 					if(is.na(jnmx1.1()) & !is.na(jnmx1.2)) { # low band / inside
-						jnmx1.prop <- prop.table(table(df.std()[,input$x1] <= jnmx1.2()))
-						jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
+						jnmx1.prop <- prop.table(table(df.std()[,input$x1] <= jnmx1.2()))[2]
 						jnmx1.sum <- list(jnmx1.sl[2], jnmx1.slestminmax[1], jnmx1.slest[1], jnmx1.sign[1], minmaxx1[1],
 							jnmx1.sign[2], jnmx1.val[2], obsorjnmx1[1], obsorjnmx1[3])
 					} else {
 						if (!is.na(jnmx1.1()) & is.na(jnmx1.2)) { # high band / inside
-							jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.1()))
-							jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
+							jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.1()))[2]
 							jnmx1.sum <- list(jnmx1.sl[1], jnmx1.slest[1], jnmx1.slestminmax[2], jnmx1.sign[1], jnmx1.val[1], 
-								jnmx1.sign[2], minmaxx1[2], obsorjnmx1[3], obsorjnmx1[2])
+								jnmx1.sign[2], minmaxx1[2], obsorjnmx1[2], obsorjnmx1[3])
 						} 
 					}
 				}
@@ -1217,7 +1107,7 @@ server <- function(input, output, session) {
 			jnmx2.slest <- c(jnmx2cb()[jnmx2.1cn(), 2], jnmx2cb()[jnmx2.2cn(), 2]) # slope at jn bounds
 			minmaxx2 <- c(jnmx2cb()[1, 1], jnmx2cb()[nrow(jnmx2cb()), 1]) # min max of mod
 			jnmx2.slestminmax <- c(jnmx2cb()[1, 2], jnmx2cb()[nrow(jnmx2cb()), 2]) # slope at min max of mod
-			obsorjnmx2 <- c(" (minimum observed value)", " (maximum observed value)", " (J-N bound)")
+			obsorjnmx2 <- c(" (minimum observed value)", " (maximum observed value)", " (J-N value)")
 			
 			# formatting
 			jnmx2.val <- format(round(jnmx2.val, digits = 2), nsmall = 2)
@@ -1228,21 +1118,18 @@ server <- function(input, output, session) {
 			# jn text summary
 			if(jnmx2.inside() == FALSE) {
 				if(is.na(jnmx2.1()) & !is.na(jnmx2.2())) { # high band / outside
-					jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.2()))
-					jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
+					jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.2()))[2]
 					jnmx2.sum <- list(jnmx2.sl[2], jnmx2.slest[2], jnmx2.slestminmax[2], jnmx2.sign[1], jnmx2.val[2],
-						jnmx2.sign[2], minmaxx2[2], obsorjnmx2[3], obsorjnmx2[2])
+						jnmx2.sign[2], minmaxx2[2], obsorjnmx2[2], obsorjnmx2[3])
 				} else {
 					if(!is.na(jnmx2.1()) & is.na(jnmx2.2())) { # low band / outside
-						jnmx2.prop <- prop.table(table(df.std()[,input$x2] <= jnmx2.1()))
-						jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
+						jnmx2.prop <- prop.table(table(df.std()[,input$x2] <= jnmx2.1()))[2]
 						jnmx2.sum <- list(jnmx2.sl[1], jnmx2.slestminmax[1], jnmx2.slest[1], jnmx2.sign[1], minmaxx2[1],
 							jnmx2.sign[2], jnmx2.val[1], obsorjnmx2[1], obsorjnmx2[3])
 					} else { # high and low band / outside
 						if(!is.na(jnmx2.1()) & !is.na(jnmx2.2())) {
 							jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.1() & 
-									df.std()[,input$x2] <= jnmx2.2()))
-							jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
+									df.std()[,input$x2] <= jnmx2.2()))[2]
 							jnmx2.sum <- list(jnmx2.sl[1], jnmx2.sign[1], minmaxx2[1], jnmx2.sign[2], jnmx2.val[1], 
 								jnmx2.slestminmax[1], jnmx2.slest[1], 
 								jnmx2.sl[2], jnmx2.sign[1], jnmx2.val[2], jnmx2.sign[2], minmaxx2[2], 
@@ -1253,22 +1140,19 @@ server <- function(input, output, session) {
 			} else { # center band
 				if(!is.na(jnmx2.1()) & !is.na(jnmx2.2())) {
 					jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.1() & 
-							df.std()[,input$x2] <= jnmx2.2()))
-					jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
+							df.std()[,input$x2] <= jnmx2.2()))[2]
 					jnmx2.sum <- list(jnmx2.sl[1], jnmx2.slest[1], jnmx2.slest[2], 
 						jnmx2.sign[1], jnmx2.val[1], jnmx2.sign[2], minmaxx2[2], obsorjnmx1[3], obsorjnmx1[3])
 				} else {
 					if(is.na(jnmx2.1()) & !is.na(jnmx2.2)) { # low band / inside
-						jnmx2.prop <- prop.table(table(df.std()[,input$x2] <= jnmx2.2()))
-						jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
+						jnmx2.prop <- prop.table(table(df.std()[,input$x2] <= jnmx2.2()))[2]
 						jnmx2.sum <- list(jnmx2.sl[2], jnmx2.slestminmax[1], jnmx2.slest[1], jnmx2.sign[1], minmaxx2[1],
 							jnmx2.sign[2], jnmx2.val[2], obsorjnmx2[1], obsorjnmx2[3])
 					} else {
 						if (!is.na(jnmx2.1()) & is.na(jnmx2.2)) { # high band / inside
-							jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.1()))
-							jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
+							jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.1()))[2]
 							jnmx2.sum <- list(jnmx2.sl[1], jnmx2.slest[1], jnmx2.slestminmax[2], jnmx2.sign[1], jnmx2.val[1], 
-								jnmx2.sign[2], minmaxx2[2], obsorjnmx2[3], obsorjnmx2[2])
+								jnmx2.sign[2], minmaxx2[2], obsorjnmx2[2], obsorjnmx2[3])
 						}
 					}
 				}
@@ -1587,7 +1471,7 @@ server <- function(input, output, session) {
 					# hoverinfo = "text",
 					surfacecolor = t(pmcolor),
 					colorscale = list(c(0, 1), c('gray', 'gray')),
-					opacity = 0.55,
+					opacity = 0.4,
 					showscale = FALSE)
 			}
 		} else {
@@ -1602,14 +1486,14 @@ server <- function(input, output, session) {
 					type = "surface",
 					surfacecolor=t(pmcolor),
 					colorscale = list(c(0, 1), c('gray', 'gray')),
-					opacity = 0.4,
+					opacity = 0.3,
 					showscale = FALSE) %>%
 					# upper confidence band
 					add_surface(x = ~vecx1(), y = ~vecx2(), z = ~t(pmciu()),
 						type = "surface",
 						surfacecolor= t(pmcolor),
 						colorscale = list(c(0, 1), c('gray', 'gray')),
-						opacity = 0.4,
+						opacity = 0.3,
 						showscale = FALSE)
 			}
 		} else {
@@ -1622,11 +1506,12 @@ server <- function(input, output, session) {
 				if(!is.null(input$jn.gradient.mx1Checkbox)) {
 					if(input$jn.gradient.mx1Checkbox == TRUE) {
 						jnmx1cb <- jnmx1cb()
-						jnmx1cb <- jnmx1cb[pm.rn() <= jnmx1.1() | pm.rn() >= jnmx1.2(),]
-						jnmx1cb <- jnmx1cb[!is.na(jnmx1cb[,1]),]
+						# jnmx1cb <- jnmx1cb[pm.rn() <= jnmx1.1() | pm.rn() >= jnmx1.2(),]
+						# jnmx1cb <- jnmx1cb[!is.na(jnmx1cb[,1]),]
 						jnmx1cbd <- (jnmx1cb[,4] - jnmx1cb[,2])*2 # upper CI minus slope times 2
-						pm.mx1.wROSg <- pm.mx1.wROS()
-						pm.mx1.wROSg[!is.na(pm.mx1.wROSg)] <- jnmx1cbd
+						# pm.mx1.wROSg <- pm.mx1.wROS()
+						# pm.mx1.wROSg[!is.na(pm.mx1.wROSg)] <- jnmx1cbd
+						pm.mx1.wROSg <- matrix(jnmx1cbd, ncol = ncol(pm()), nrow = nrow(pm()))
 						shscmx1 <- TRUE
 					} else {
 						pm.mx1.wROSg <- pm.mx1.wROS()
@@ -1640,7 +1525,7 @@ server <- function(input, output, session) {
 				p <- add_surface(p, x = ~vecx1(), y = ~vecx2(), z = ~t(pm.mx1.wROS()),
 					type = "surface",
 					surfacecolor=t(pm.mx1.wROSg),
-					colorscale = list(c(0, 1), c("#567001", 'white')),
+					colorscale = list(c(0, 1), c("#3366ff", 'white')),
 					opacity = 0.6,
 					showscale = FALSE)
 			} 
@@ -1673,7 +1558,7 @@ server <- function(input, output, session) {
 				p <- add_surface(p, x = ~vecx1(), y = ~vecx2(), z = ~t(pm.mx2.wROS()),
 					type = "surface",
 					surfacecolor=t(pm.mx2.wROSg),
-					colorscale = list(c(0, 1), c("#3366ff", 'white')),
+					colorscale = list(c(0, 1), c("#567001", 'white')),
 					opacity = 0.6,
 					showscale = FALSE)
 			}
@@ -1688,7 +1573,7 @@ server <- function(input, output, session) {
 				p <- add_trace(p, x = coonx1(), y = vecx2(), z = ~coonx1y(),
 					type = "scatter3d",
 					mode = "lines",
-					line = list(width = 3, dash = "solid", color = "#567001"),
+					line = list(width = 3, dash = "solid", color = "#3366ff"),
 					opacity = 0.7)
 			}
 		} else {
@@ -1701,7 +1586,7 @@ server <- function(input, output, session) {
 				p <- add_trace(p, x = vecx1(), y = coonx2(), z = ~coonx2y(),
 					type = "scatter3d",
 					mode = "lines",
-					line = list(width = 3, dash = "solid", color = "#3366ff"),
+					line = list(width = 3, dash = "solid", color = "#567001"),
 					opacity = 0.7)
 			}
 		} else {
@@ -1739,7 +1624,7 @@ server <- function(input, output, session) {
 			if(input$pm.mx1.wROSCheckbox == TRUE) {
 				if(!is.null(input$jn.gradient.mx1Checkbox)) {
 					if(input$jn.gradient.mx1Checkbox == TRUE) {
-						HTML("<div style='background-image: linear-gradient(to right, #567001, white);  
+						HTML("<div style='background-image: linear-gradient(to right, #3366ff, white);  
 							border-width: 1px; border-style: solid; border-color:gray;
 							height: 20px;   text-align: justify' </div>")
 					}
@@ -1819,7 +1704,7 @@ server <- function(input, output, session) {
 			if(input$pm.mx2.wROSCheckbox == TRUE) {
 				if(!is.null(input$jn.gradient.mx2Checkbox)) {
 					if(input$jn.gradient.mx2Checkbox == TRUE) {
-						HTML("<div style='background-image: linear-gradient(to right, #3366ff, white);  
+						HTML("<div style='background-image: linear-gradient(to right, #567001, white);  
 							border-width: 1px; border-style: solid; border-color:gray;
 							height: 20px;   text-align: justify' </div>")
 					}
@@ -1898,7 +1783,7 @@ server <- function(input, output, session) {
 		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
 			(input$x1 != input$y), (input$x2 != input$y))
 		checkboxInput(inputId = "predCICheckbox", 
-			label = "95% CI")
+			label = "Pred Val 95% CI")
 	})
 	output$pm.mx1.wROSUI <- renderUI({
 		if ((!is.na(jnmx1.1()) | !is.na(jnmx1.2())) & intsig() == TRUE) {
@@ -1955,7 +1840,7 @@ server <- function(input, output, session) {
 	output$mx1CheckboxTitle <- renderText({
 		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
 			(input$x1 != input$y), (input$x2 != input$y))
-		if(intsig() == TRUE & (!is.na(jnmx1.1()) | !is.na(jnmx1.2()) | !is.na(coonx1()))) {
+		if(intsig() == TRUE) {
 			HTML(paste0("<div style='font-weight: 700' >", input$x1, " as Moderator </div>")) 
 		} else {
 			NULL
@@ -1964,7 +1849,7 @@ server <- function(input, output, session) {
 	
 	output$mx2CheckboxTitle <- renderText({
 		req(input$x1 != '--', input$x2 != '--', input$y != '--')
-		if(intsig() == TRUE & (!is.na(jnmx2.1()) | !is.na(jnmx2.2()) | !is.na(coonx2()))) {
+		if(intsig() == TRUE) {
 			HTML(paste0("<div style='font-weight: 700' >", input$x2, " as Moderator </div>")) 
 		} else {
 			NULL
@@ -1992,34 +1877,10 @@ server <- function(input, output, session) {
 				font-size: 12px; font-color: #808080'> Check your model. The same variable was input twice. </div>"))
 		}
 	})
-	
-	# render message to click 3d plot tab ------------
-	output$click3D <- renderText({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
-			(input$x1 != input$y), (input$x2 != input$y)) 
-			HTML(paste0("<div style='background-color: #BFD3F0; border-radius: 5px;
-			text-align: center; border-width: 1px; border-style: solid; border-color: #808080; padding:8px;
-				font-size: 12px; font-color: #808080'> Click the <b> 3D Plot </b> tab to see the output for your model. </div>"))
-	})
-	
-
-# code for making live figures --------------------------------------------
-	output$codetitle1 <- renderUI({
-		HTML(paste(
-			"<div style='font-size: 13px'> 
-			<h4> Function Code </h4> 
-			Click <a href=“https://github.com/mfinsaas/jnthreedimint/blob/master/FunctionCode_LivePlot.R”>here</a> to access the function code for producing a live plot. You must first run the function code
-			in your R session, then run the input code below.
-			<h4> Input Code </h4>
-			Click <a href=“https://github.com/mfinsaas/jnthreedimint/blob/master/InputCode_LifePlot.R”>here</a>
-			to access the input code. You will need to update the arguments before running
-			it in the RStudio console. Once you've run it, the plot will appear in the RStudio Viewer.
-			A copy will also be saved locally to your computer.
-			To publish the plot online, click the blue Publish button in the Viewer window and follow the steps to make 
-			a free RPubs account."))
-		})
-
 }
+
+
+
 
 shinyApp(ui, server)
 
