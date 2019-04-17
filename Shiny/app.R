@@ -629,7 +629,7 @@ ui <- fluidPage(
 					htmlOutput(outputId = "desc.stdTitle"),
 					tableOutput(outputId = "desc.std")),
 				tabPanel(title = "Raw Data", DT::dataTableOutput(outputId = "rawdata")),
-				tabPanel(title = "Code for Saving Live Plot", 
+				tabPanel(title = "Code for Saving Plot", 
 					htmlOutput(outputId = "codetitle1"))))
 	)
 )
@@ -640,17 +640,19 @@ server <- function(input, output, session) {
 			"<div style='font-size: 13px'> 
 			<h4> Welcome </h4>
 			This visualization tool represents continuous by continuous interactions as a regression plane in 
-			3D space. It also depicts regions of significance from the Johnon-Neyman technique 
+			3D space in combination with the regions of significance from the Johnon-Neyman technique 
 			on the regression plane. You can see an example of the type of plot produced <a href=“http://rpubs.com/sbu_mfinsaas/Figure8”> here</a>. 
-			<h5> Upload a Datafile </h5>
-			 This data file must have unique variable names at the top of the file, should not contain missing 
-			data indicators (but blanks are okay; the program handles missing data using listwise deletion based 
-			on variables in the model), and can be an Excel (.xls), comma-separated (.csv), or SPSS (.sav) file. 
-			In some cases, some of these file types may appear grayed out/unavailable in the file upload window. 
-			To get around this, change your setting in the file upload window to view all file types.
-		  <br> <br>	To upload a file, click the browse button. Once the file has been properly uploaded, the dropdown menus 
-			for the predictors and outcome will automatically populate with the variable names in the file. 
-			<h5> Select Variables for Regression Model </h5>
+<br> <br> Please contact Megan Finsaas at megan.finsaas@gmail.com if you have questions or comments about the app or run into issues while using it. 
+<br> <h5> Uploading a Datafile </h5>
+			  File Requirements:<br>
+1. Unique variable names at the top of the file <br>
+2. No missing data indicators (but blanks are okay; the program handles missing data using listwise deletion based 
+			on variables in the model) <br>
+3. Excel (.xls), comma-separated (.csv), or SPSS (.sav) file (sometimes these file types may appear grayed out/unavailable in the file upload window. 
+			To get around this, change your setting in the file upload window to view all file types) <br> 
+		  <br>	To upload a file, click the browse button. Once the file has been properly uploaded, the dropdown menus 
+			for the predictors and outcome will automatically populate with the variable names in the file. <br>
+			<h5> Inputting Variables for Regression Model </h5>
 			 Select the outcome variable (Y) and the predictors (X1 and X2) that will make up the interaction term
 			by clicking the dropdown buttons and locating the variables in the list. Alternatively, you can delete
 			“--” and type the variable name. You can transform your data by clicking the “Center” or “Standardize” buttons
@@ -658,8 +660,8 @@ server <- function(input, output, session) {
 			text box for a dropdown list or to type the variable names. Covariates are always centered at their means.
 			<br> <br>
 			At this point, the program does not accept squared terms, so you will get a warning if you try to enter
-			the same variable for X1 and X2. It will accept dichotomous or categorical variables, but they will be
-			treated like continuous variables. 
+			the same variable for X1 and X2. While it will accept dichotomous or categorical variables, they will be
+			treated like continuous variables. <br>
 			<h5> Main Output </h5>
 			You can find this output under the 
 			<b> 3D Plot </b>  tab. 
@@ -667,6 +669,8 @@ server <- function(input, output, session) {
 			regression model and create a 3D plot with the observed data overlaid as a scatterplot and a regression 
 			plane. Since the program is “reactive,” it updates in real time based on your input without the use of 
 			a “run” button. <br> <br>
+			The 3D plot will appear in the center of the screen. The Plotly buttons in the top right of the plot area allow you to 
+			zoom, pan, and rotate the plot, as well as snap a picture of it. <br> <br> 
 			The model results will appear on the right side of the screen, as well as the output from
 			the Johnson-Neyman analysis and crossover points for each of the predictors acting as the moderator. <br> <br>
 			When
@@ -674,7 +678,7 @@ server <- function(input, output, session) {
 			on the moderator that mark the bounds of the region of significance, the range of slope estimates for the 
 			relationship between the primary predictor and outcome within this region, the percentage of cases that 
 			fall within this region, and the observed range of the moderator variable. This output is written using 
-			the names of the variables and in a conversational style. 
+			the names of the variables and in a conversational style. <br>
 			<h5> Plot Features </h5>
 			At this point, you will also see additional checkboxes appear in the left navigation bar. For all 
 			models, the checkboxes for the scatterplot, regression plane, and 95% confidence interval around the 
@@ -696,7 +700,7 @@ server <- function(input, output, session) {
 			appear. (You can also view the precise confidence band widths at all slope estimates under the Johnson-Neyman 
 			tab.) <br> <br>
 			Finally, if a crossover point falls within the range of data, an additional checkbox (“Crossover”) 
-			will appear; checking this box will add the crossover point to the figure.
+			will appear; checking this box will add the crossover point to the figure. <br>
 			<h5> Additional Output </h5>
 			You can find marginal effects plots and a table containing the slope estimates and their corresponding 95%
 			confidence bands and p-values at all values of the moderator under the <b> Johnson-Neyman </b> 
@@ -708,7 +712,7 @@ server <- function(input, output, session) {
 			the user-specified standardization option applied. <br> <br>
 			Finally, you can view the raw data under the <b>
 			Raw Data </b> tab; this data can be sorted by any variable. The descriptive and raw data tabs can be useful 
-			for verifying that the data were uploaded correctly.
+			for verifying that the data were uploaded correctly. <br>
 			<h5> Saving and Sharing Plots </h5>
 			There are three ways to save and share your plot. The most straightforward but most limited approach is to 
 			use a built-in screen grab function to take still snapshots of the figure in various rotations (i.e., PrtScn 
@@ -726,13 +730,15 @@ server <- function(input, output, session) {
 			RStudio console, with the arguments set to user preference; and (4) clicking the blue “Publish” icon in 
 			the RStudio viewer and following the steps to publish to the free service <a href=“http://rpubs.com/”>Rpubs</a>. 
 			This approach works because RStudio supports online publication directly from its viewer window, 
-			whereas this action is not supported directly from Shiny apps. 
+			whereas this action is not supported directly from Shiny apps. <br>
 			<h5> Trouble Seeing Plot? </h5>
-			If you do run into trouble viewing the plot (e.g., the text boxes overlap), please (1)
-			double check that you're using Google Chrome, (2) expand your browser window fully,
-			(3) zoom out in your browser window (this option is usually located under View. On Macs: the shortcut is Command -),
-			and (4) use the Plotly options to zoom, pan, and rotate the plot. These options appear at the top right side of the plot when you hover your mouse over the plot. Once you have clicked on zoom, pan, or rotate, click on the plot and hold while moving the mouse side to side or up and down to change the view.
-			If you continue to have problems, please email me at megan.finsaas@stonybrook.edu.<br> <br> <br> <br>"))
+			If you run into trouble viewing the plot (e.g., the text boxes overlap; can't see the plot fully), please: <br>
+1. Double check that you're using Google Chrome <br>
+2. Expand your browser window fully <br> 
+3. Zoom out in your browser window (this option is usually located under View; on Macs, the shortcut is Command -) <br>
+4. Use the Plotly options to zoom, pan, and rotate the plot. (These options appear at the top right side of the plot when you hover your mouse over the plot. 
+Once you have clicked on zoom, pan, or rotate, click on the plot and hold while moving the mouse side to side or up and down to change the view.) <br>
+			If you continue to have problems, please email me at megan.finsaas@gmail.com.<br> <br> <br> <br>"))
 	)
 	
 	#load file
