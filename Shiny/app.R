@@ -519,7 +519,7 @@ ui <- fluidPage(
 		sidebarPanel(width = 3,
 			fileInput(inputId = "uploadFile", # input: select a file
 				label = "Choose File", multiple = FALSE,
-				accept = c("text/csv/text/comma-separated-values,text/plain")),
+				accept = c("text/csv/text/comma-separated-values,text/solid")),
 			#	hr(),
 			selectInput(inputId = "y", 
 				label = "Select Y (Dependent) Variable", choices = "--"),
@@ -544,7 +544,9 @@ ui <- fluidPage(
 			hr(),
 			selectInput(inputId = "cov", 
 				label = "Select Covariate(s) (If none, leave blank)", choices = "--", multiple = TRUE),
-			htmlOutput(outputId = "click3D"),
+			htmlOutput(outputId = "messageNonNum"),
+			htmlOutput(outputId = "messageSameVar"),
+			htmlOutput(outputId = "messageInt"),
 			br(),
 			htmlOutput(outputId = "plotfeatTitle"),
 			fluidRow(
@@ -553,36 +555,32 @@ ui <- fluidPage(
 				column(4, uiOutput(outputId = "predCIUI"))),
 			htmlOutput(outputId = "mx1CheckboxTitle"),
 			fluidRow(
-				column(4, uiOutput(outputId = "pm.mx1.wROSUI")),
-				column(4, uiOutput(outputId = "jn.gradient.mx1UI")),
+				column(6, uiOutput(outputId = "pm.mx1.wROSUI")),
 				column(4, uiOutput(outputId = "coonx1UI"))),
 			htmlOutput(outputId = "mx2CheckboxTitle"),
 			fluidRow(
-				column(4, uiOutput(outputId = "pm.mx2.wROSUI")),
-				column(4, uiOutput(outputId = "jn.gradient.mx2UI")),
+				column(6, uiOutput(outputId = "pm.mx2.wROSUI")),
 				column(4, uiOutput(outputId = "coonx2UI"))),
-			htmlOutput(outputId = "intWarning"),
-			htmlOutput(outputId = "sameVarWarning"),
-			tags$style("body{font-size: 9px}"),
-			tags$style(".btn{font-size: 9px}"),
-			tags$style(".form-control{font-size: 9px; height: 26px}"),
+			tags$style("body{font-size: 10px}"),
+			tags$style(".btn{font-size: 10px}"),
+			tags$style(".form-control{font-size: 10px; height: 28px}"),
 			tags$style(".well{padding: 14px}"),
 			tags$style(".form-group{margin-bottom: 10px}"),
 			tags$style("hr{margin-bottom: 10px; margin-top: 10px; border-top: 1px solid #cccccc}"),
-			tags$style(".dropdown-menu{font-size: 9px}"),
-			tags$style(".progress-bar{font-size: 9px")),
+			tags$style(".dropdown-menu{font-size: 10px}"),
+			tags$style(".progress-bar{font-size: 10px")),
 		# main panel --------------------------------------------------------------
 		mainPanel(width = 9,
 			navbarPage(title = "",
 				tabPanel(title = "How To",
 					htmlOutput(outputId = "guide")),
-				tabPanel(title = "3D Plot", 
+				tabPanel(title = "Main Output", 
 					fluidRow(
 						column(7,
 							plotlyOutput(outputId = "plot3dPlot")),
 						column(5,
 							htmlOutput(outputId = "modFit"),
-							inlineCSS(list("table" = "font-size: 9px")),
+							inlineCSS(list("table" = "font-size: 10px")),
 							htmlOutput("jnmx1.sum"),
 							htmlOutput("jnmx2.sum"))),
 					fluidRow(
@@ -606,30 +604,31 @@ ui <- fluidPage(
 				navbarMenu(title = "Johnson-Neyman",
 					tabPanel(title = "Slope Confidence Band Tables",
 						htmlOutput(outputId = "mx1cbTitle"),
+						htmlOutput(outputId = "jnmx1Text"),
 						DT::dataTableOutput("jnmx1cbInfo"),
 						htmlOutput(outputId = "mx2cbTitle"),
+						htmlOutput(outputId = "jnmx2Text"),
 						DT::dataTableOutput("jnmx2cbInfo")),
 					tabPanel(title = "Marginal Effect Plots",
-						wellPanel(
-							h5(textOutput(outputId = "jnmx1Title")), 
-							br(),
-							fluidRow(
-								column(4,verbatimTextOutput(outputId = "jnmx1Info")),
-								column(8,	plotOutput(outputId = "jnmx1Plot")))),
+						htmlOutput(outputId = "jnmx1Title"), 
 						br(),
-						wellPanel(
-							h5(textOutput(outputId = "jnmx2Title")), 
-							br(),
-							fluidRow(
-								column(4, verbatimTextOutput(outputId = "jnmx2Info")),
-								column(8, plotOutput(outputId = "jnmx2.matlot")))))),
+						fluidRow(
+							column(4, htmlOutput(outputId = "jnmx1Info")),
+							column(8,	plotOutput(outputId = "jnmx1Plot"))),
+						br(),
+						htmlOutput(outputId = "jnmx2Title"), 
+						br(),
+						fluidRow(
+							column(4, htmlOutput(outputId = "jnmx2Info")),
+							column(8, plotOutput(outputId = "jnmx2Plot"))),
+						br())),
 				tabPanel(title = "Descriptives", 
-					htmlOutput(outputId = "descTitle"),
-					tableOutput(outputId = "desc"),
 					htmlOutput(outputId = "desc.stdTitle"),
-					tableOutput(outputId = "desc.std")),
+					tableOutput(outputId = "desc.std"),
+					htmlOutput(outputId = "descTitle"),
+					tableOutput(outputId = "desc")),
 				tabPanel(title = "Raw Data", DT::dataTableOutput(outputId = "rawdata")),
-				tabPanel(title = "Code for Saving Plot", 
+				tabPanel(title = "Code for Saving Plots", 
 					htmlOutput(outputId = "codetitle1"))))
 	)
 )
@@ -637,107 +636,82 @@ ui <- fluidPage(
 server <- function(input, output, session) {
 	output$guide <- renderUI(
 		HTML(paste(
-			"<div style='font-size: 13px'> 
-			<h4> Welcome </h4>
-			This visualization tool represents continuous by continuous interactions as a regression plane in 
-			3D space in combination with the regions of significance from the Johnon-Neyman technique 
-			on the regression plane. You can see an example of the type of plot produced <a href=“http://rpubs.com/sbu_mfinsaas/Figure8”> here</a>. 
-<br> <br> Please contact Megan Finsaas at megan.finsaas@gmail.com if you have questions or comments about the app or run into issues while using it. 
-<br> <h5> Uploading a Datafile </h5>
-			  File Requirements:<br>
-1. Unique variable names at the top of the file <br>
-2. No missing data indicators (but blanks are okay; the program handles missing data using listwise deletion based 
-			on variables in the model) <br>
-3. Excel (.xls), comma-separated (.csv), or SPSS (.sav) file (sometimes these file types may appear grayed out/unavailable in the file upload window. 
-			To get around this, change your setting in the file upload window to view all file types) <br> 
-		  <br>	To upload a file, click the browse button. Once the file has been properly uploaded, the dropdown menus 
-			for the predictors and outcome will automatically populate with the variable names in the file. <br>
-			<h5> Inputting Variables for Regression Model </h5>
-			 Select the outcome variable (Y) and the predictors (X1 and X2) that will make up the interaction term
-			by clicking the dropdown buttons and locating the variables in the list. Alternatively, you can delete
-			“--” and type the variable name. You can transform your data by clicking the “Center” or “Standardize” buttons
-			under each variable, or leave the data in the raw form by clicking Raw. To add covariates, click in the
-			text box for a dropdown list or to type the variable names. Covariates are always centered at their means.
-			<br> <br>
-			At this point, the program does not accept squared terms, so you will get a warning if you try to enter
-			the same variable for X1 and X2. While it will accept dichotomous or categorical variables, they will be
-			treated like continuous variables. <br>
-			<h5> Main Output </h5>
-			You can find this output under the 
-			<b> 3D Plot </b>  tab. 
-			Once you have input the predictor and outcome variables, the program will automatically estimate the 
-			regression model and create a 3D plot with the observed data overlaid as a scatterplot and a regression 
-			plane. Since the program is “reactive,” it updates in real time based on your input without the use of 
-			a “run” button. <br> <br>
-			The 3D plot will appear in the center of the screen. The Plotly buttons in the top right of the plot area allow you to 
-			zoom, pan, and rotate the plot, as well as snap a picture of it. <br> <br> 
-			The model results will appear on the right side of the screen, as well as the output from
-			the Johnson-Neyman analysis and crossover points for each of the predictors acting as the moderator. <br> <br>
-			When
-			a region of significance falls within the observed data, the Johnson-Neyman output will include the values
-			on the moderator that mark the bounds of the region of significance, the range of slope estimates for the 
-			relationship between the primary predictor and outcome within this region, the percentage of cases that 
-			fall within this region, and the observed range of the moderator variable. This output is written using 
-			the names of the variables and in a conversational style. <br>
+			"<div style='font-size: 12px'> 
+			<h5> Welcome </h5>
+					This visualization tool represents continuous by continuous interactions as a regression plane in 
+					3D space in combination with the regions of significance from the Johnon-Neyman technique. You can see an example of the type of plot produced <a href=http://rpubs.com/sbu_mfinsaas/Figure8 target=_blank> here</a>. 
+					Please contact Megan Finsaas at megan.finsaas@gmail.com if you have questions or comments about the app. <br> <br>
+					For the best performance, please run the app in <b> Google Chrome</b>. 
+			<h5> Uploading a Datafile </h5>
+			<ul>	
+					<li> File requirements: </li>
+				    <ul>
+							<li>Must have unique variable names at top of the file. Since these names will appear on the plot and the output, we recommend keeping them short (< 8 characters). Variable names that are too long can push the model summary off screen. </li>
+							<li>No missing data indicators allowed, but blanks are okay. The program handles missing data using listwise deletion on the variables in the model. </li>
+							<li>Must be a comma-separated (.csv) or SPSS (.sav) file. Sometimes these file types may appear grayed out/unavailable in the file upload window. 
+								To access them, change the setting in the file upload window to view all file types. </li>
+						<li> Variables must be numeric. If using an SPSS file, the program may read variables with few integer values or with value labels as factors. Try removing the value labels and/or using a .csv file instead. </li>
+					</ul>
+						<li> Once the file has uploaded, the dropdowns will populate with the variable names from the file. </li>
+						<li> If the file contains a large number of variables, not all of their names will appear in the dropdown list, but they can still be accessed by beginning to type the variable names. You may wish to subset your dataset to include only the variables in your model prior to uploading the file to mitigate this (and to speed up processing time in general). </li>
+</ul>					
+<h5> Inputting Variables for Regression Model </h5>
+					<ul>
+						<li> Click the dropdown buttons for variable names or delete “--” and type the variable name. </li>
+						<li> Once the predictors and an outcome are input, the regression model will automatically estimate.
+						<li> Predictors and the outcome are centered by default. You can alternatively standardize them or keep them in the raw form. The model will automatically re-estimate whenever the standardization option is changed. </li>
+						<li> To add covariates, click the text box for a dropdown list or type the variable names. Covariates are always centered at their means. They can be entered at any time and the model will automatically update to include them.</li>
+						<li> At this point, the program does not accept squared terms. </li>			
+					</ul>
+
+			<h5> Main Output Tab </h5>
+					<ul>
+						<li> Here you will find the <b>model summary</b> and <b>3D plot</b>. </li>
+						<li> When	a region of significance falls within the observed data, the <b>Johnson-Neyman output</b> will include the values
+							on the moderator that mark the bounds of the region of significance, the range of slope estimates for the 
+							predictor-outcome relationship and the percentage of cases within this region, and the observed range of the moderator variable. </li>
+						<li> When a <b>crossover point</b> falls within the observed data, it will also print on this tab. </li>
+					</ul>
 			<h5> Plot Features </h5>
-			At this point, you will also see additional checkboxes appear in the left navigation bar. For all 
-			models, the checkboxes for the scatterplot, regression plane, and 95% confidence interval around the 
-			predicted values will appear. You can add or take away these features on the plot by clicking the 
-			checkboxes. The 95% confidence intervals will appear as semi-opaque planes floating above and below the 
-			regression plane. <br> <br>
-			Which other checkboxes appear below these depend on whether the interaction term is significant and 
-			whether there are regions of significance or crossover points for either predictor that fall within 
-			the observed range of data. If the interaction term is not significant, the user will see a message 
-			stating this, and no additional buttons will appear. If the interaction term is significant, but neither 
-			region of significance or crossover point falls within the range of either predictor, you won't see a message but 
-			again, no additional	checkboxes will appear. <br> <br> 
-			If a region of significance falls within 
-			the range of data, an additional checkbox called “ROS” (for region of significance) will appear under the
-			name of the variable acting as the moderator for this region. Ticking this box will do two things: (1) 
-			shade the corresponding region of significance on the plot and (2) cause another checkbox (“Slope 95% CB”) 
-			to appear. If this new checkbox is checked, the region of significance will be shaded using a gradient that 
-			reflects the width of the 95% confidence band around the slope estimate and a legend for the gradient will 
-			appear. (You can also view the precise confidence band widths at all slope estimates under the Johnson-Neyman 
-			tab.) <br> <br>
-			Finally, if a crossover point falls within the range of data, an additional checkbox (“Crossover”) 
-			will appear; checking this box will add the crossover point to the figure. <br>
+					<ul> 
+						<li> The Plotly buttons at the top right of the plot allow you to <b> zoom, pan, rotate, and save a .png </b> of the plot.  </li>
+						<li> For all models, checkboxes for <b> adding the scatterplot, regression plane, </b>and <b>95% confidence interval</b> around the predicted values will appear in the left navigation bar. </li>
+						<li>	Which other plot feature options appear below these depend on whether there are regions of significance or crossover points within the observed range of data. </li>
+							<ul>
+								<li> If a region of significance falls within the range of data, the option to <b> shade the region of significance </b> on the regression plane will appear. Selecting the “Solid ROS” button will shade the region of significance on the plot in one color; selecting the “Gradient ROS” button will shade the region using a gradient that reflects the width of the 95% confidence band around the slope estimate.
+								You can also view the confidence band estimates under the Johnson-Neyman tab. </li>
+								<li> If a crossover point falls within the range of data, the “Crossover” checkbox will appear, which <b> adds the crossover point </b>to the figure.</li>
+							</ul>
+						</ul>
 			<h5> Additional Output </h5>
-			You can find marginal effects plots and a table containing the slope estimates and their corresponding 95%
-			confidence bands and p-values at all values of the moderator under the <b> Johnson-Neyman </b> 
-			tab. If you want to know the bounds of the Johnson-Neyman region of significance regardless of whether they
-			fall within the range of observed data, you can find these values next to the marginal effects plots. <br> <br>
-			You
-			can also view descriptive statistics under the <b> Descriptives </b> tab. The first set of descriptives are 
-			for all variables in the dataset in their raw forms. The second set are for the variables in the model with
-			the user-specified standardization option applied. <br> <br>
-			Finally, you can view the raw data under the <b>
-			Raw Data </b> tab; this data can be sorted by any variable. The descriptive and raw data tabs can be useful 
-			for verifying that the data were uploaded correctly. <br>
+					<ul>
+						<li> <b> Johnson-Neyman Tab: </b> Marginal effects plots and Johnson-Neyman bounds regardless of whether they fall within the range of observed data; tables with slope estimates, 95% confidence bands and <i>p</i>-values at all values of the moderator.</li> 
+						<li> <b> Descriptives Tab: </b> Table of descriptives for variables in model with standardization options applied; table for all variables in the dataset in raw form </li>
+						<li> <b> Raw Data Tab: </b> Sortable data frame of raw data. </li>
+					</ul>
 			<h5> Saving and Sharing Plots </h5>
-			There are three ways to save and share your plot. The most straightforward but most limited approach is to 
-			use a built-in screen grab function to take still snapshots of the figure in various rotations (i.e., PrtScn 
-			on Windows; Shift + Command + 4 on Macs).<br> <br> 
-			The next most straightforward approach is to use built-in video capture functions to record the screen while 
-			manually rotating the plot; we recommend clicking and dragging above the plot, outside of the portion of the 
-			screen that is being recorded, so that the mouse pointer is not in the recording. Images or recordings created 
-			using these methods can then be saved to the user’s hard drive or stored online using the user’s preferred 
-			online storage method (e.g,. Dropbox, Google Drive). Storing the figures online also allows the user to link 
-			to them in journal submissions. <br> <br> 
-			Finally, the most complex approach, which results in a “live” rotatable version of the plot with a permanent 
-			link, involves four steps: (1) downloading <a href=“https://www.r-project.org”>R</a> and <a href=“https://www.rstudio.com/”>RStudio</a>, 
-			which are both free programs; (2) copying and running the function code located in the <b> Code </b> tab in the
-			RStudio console; (3) copying and running the input code, also located in the <b> Code </b> tab, into the 
-			RStudio console, with the arguments set to user preference; and (4) clicking the blue “Publish” icon in 
-			the RStudio viewer and following the steps to publish to the free service <a href=“http://rpubs.com/”>Rpubs</a>. 
-			This approach works because RStudio supports online publication directly from its viewer window, 
-			whereas this action is not supported directly from Shiny apps. <br>
+					There are three ways to save and share your plots:
+					<ol>
+						<li> Take screen/snapshots of the figure in various rotations (i.e., PrtScn on Windows; Shift + Command + 4 on Macs) or click the Plotly camera button to save a .png file. </li>
+						<li> Record the plot while manually rotating the plot. To keep the mouse outside the plot while recording, click and drag above it. </li>
+						<li> To create a “live” rotatable plot with a permanent link:
+						<ul> 
+							<li>Download <a href=https://www.r-project.org target=_blank>R</a> and <a href=https://www.rstudio.com target=_blank>RStudio</a>, which are both free programs. </li>
+							<li> Run the function code linked in the <b> Code for Saving Plots </b> tab in RStudio. </li>
+							<li> Run the input code linked in the <b> Code for Saving Plots </b> tab in RStudio after setting the arguments to your preference. </li>
+							<li> Click the blue “Publish” icon in the RStudio viewer and follow the steps to publish to the free service <a href=http://rpubs.com target=_blank>Rpubs</a>. </li>
+							<li> This approach works because RStudio supports online publication directly from its viewer window, whereas this action is not supported directly from Shiny apps. </li>
+						</ul>
+					</ol>
 			<h5> Trouble Seeing Plot? </h5>
-			If you run into trouble viewing the plot (e.g., the text boxes overlap; can't see the plot fully), please: <br>
-1. Double check that you're using Google Chrome <br>
-2. Expand your browser window fully <br> 
-3. Zoom out in your browser window (this option is usually located under View; on Macs, the shortcut is Command -) <br>
-4. Use the Plotly options to zoom, pan, and rotate the plot. (These options appear at the top right side of the plot when you hover your mouse over the plot. 
-Once you have clicked on zoom, pan, or rotate, click on the plot and hold while moving the mouse side to side or up and down to change the view.) <br>
+			If you run into trouble viewing the plot (e.g., the text boxes overlap; can't see the plot fully), please: 
+			<ul>
+				<li> Double check that you're using Google Chrome. </li>
+				<li> Expand your browser window fully. </li>
+				<li> Zoom out in your browser window (this option is usually located under View; on Macs, the shortcut is Command -). </li>
+				<li> Use the Plotly options to zoom, pan, and rotate the plot. These options appear at the top right side of the plot when you hover your mouse over the plot. Once you have clicked on zoom, pan, or rotate, click on the plot and hold while moving the mouse side to side or up and down to change the view. </li>
+				<li> Make sure your variable names are < 8 characters. </li>
+			</ul>
 			If you continue to have problems, please email me at megan.finsaas@gmail.com.<br> <br> <br> <br>"))
 	)
 	
@@ -747,16 +721,8 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 		if(tools::file_ext(input$uploadFile) == "sav") {
 			foreign::read.spss(input$uploadFile$datapath, to.data.frame = TRUE)
 		} else {
-			if(tools::file_ext(input$uploadFile) == "xlsx") {
-				read.xlsx(input$uploadFile$datapath)
-			} else {
-				if(tools::file_ext(input$uploadFile) == "xls") {
-					read.xls(input$uploadFile$datapath)
-				} else {
-					if(tools::file_ext(input$uploadFile) == "csv") {
-						read.csv(input$uploadFile$datapath, header = TRUE)
-					}
-				}
+			if(tools::file_ext(input$uploadFile) == "csv") {
+				read.csv(input$uploadFile$datapath, header = TRUE)
 			}
 		}
 	})
@@ -766,7 +732,7 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 		updateSelectInput(session, "y", choices = c("--", names(df())))
 		updateSelectInput(session, "x1", choices = c("--", names(df())))
 		updateSelectInput(session, "x2", choices = c("--", names(df())))
-		updateSelectInput(session, "cov", choices = c("--", names(df())))
+		updateSelectInput(session, "cov", choices = c(names(df())))
 	})
 	
 	# display raw data
@@ -776,10 +742,51 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 			rownames = FALSE)
 	})
 	
-	# standardize variables and subset data to include only variable --------
-	df.std <- reactive({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
-			(input$x1 != input$y), (input$x2 != input$y))
+	# determine whether variables are numeric ------------
+	non.numeric <- reactive({
+		req(input$x1 != "--", input$x2 != "--", input$y != "--")
+		mat <- as.matrix(df()[, c(input$y, input$x1, input$x2, input$cov)])
+		if(is.numeric(mat) == TRUE) {
+			non.numeric <- FALSE
+		} else {
+			non.numeric <- TRUE
+		}
+	})
+	
+	
+	# determine whether same var input ----------------------------------------
+	sameVar <- reactive({
+		req(input$x1 != "--", input$x2 != "--", input$y != "--")
+		if(is.null(input$cov)) {
+			if(input$x1 == input$x2 | input$x1 == input$y | input$x2 == input$y) {
+				sameVar <- TRUE
+			} else {
+				sameVar <- FALSE
+			}
+		} else {
+			if(length(input$cov) == 1) {
+				if(input$x1 == input$x2 | input$x1 == input$y | input$x2 == input$y | input$cov == input$x1 |
+						input$cov == input$x2 | input$cov == input$y) {
+					sameVar <- TRUE
+				} else {
+					sameVar <- FALSE
+				}
+			} else {
+				if(length(input$cov) > 1) {
+					if(input$x1 == input$x2 | input$x1 == input$y | input$x2 == input$y | any(input$cov == input$x1) |
+							any(input$cov == input$x2) | any(input$cov == input$y)) {
+						sameVar <- TRUE
+					} else {
+						sameVar <- FALSE
+					}
+				}
+			}
+		}
+	})
+	
+	# standardize variables and subset data --------
+	df.std <- eventReactive(c(input$x1, input$x2, input$y, input$std.x1, input$std.x2, input$std.y, input$cov, input$uploadFile), {
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
 		data <- df() 
 		
 		# keep only cases with values on all variables
@@ -842,13 +849,12 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	# render descriptives output
 	output$descTitle <- renderUI({
 		req(input$uploadFile)
-		h6("Descriptives on Raw Data")
+		h6("Descriptive Statistics on Raw Data")
 	})
 	
 	output$desc.stdTitle <- renderUI({
-		req(input$uploadFile, input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
-			(input$x1 != input$y), (input$x2 != input$y))
-		h6("Descriptives on Variables in Model with Standardization Option Applied")
+		req(input$uploadFile, input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
+		h6("Descriptive Statistics on Variables in Model with Standardization Options Applied")
 	})
 	
 	
@@ -863,30 +869,28 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	
 	# model output ------------------------------------------------------------
 	output$modInfo <- renderUI({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', 
-			(input$x1 != input$x2), (input$x1 != input$y), (input$x2 != input$y))
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
 		HTML(paste("<div style='font-weight: 700' >Model Summary</div>"))
 	})
 	
 	output$modFit <- renderUI({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', 
-			(input$x1 != input$x2), (input$x1 != input$y), (input$x2 != input$y))
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
 		dv <- paste0("Dependent variable: ", input$y)
 		
 		rsq <- modsum()$r.squared
-		rsq <- format(round(rsq, digits = 2), nsmall = 2)
+		rsq <- format(round(rsq, digits = 3), nsmall = 3)
 		rsq <- paste0("R-squared = ", rsq)
 		arsq <- modsum()$adj.r.squared
-		arsq <- format(round(arsq, digits = 2), nsmall = 2)
+		arsq <- format(round(arsq, digits = 3), nsmall = 3)
 		arsq <- paste0("Adjusted R-squared = ", arsq)
 		
 		f <- modsum()$fstatistic[1]
 		fdf1 <- modsum()$fstatistic[2]
 		fdf2 <- modsum()$fstatistic[3]
 		fp <- 1 - stats::pf(f, fdf1, fdf2)
-		f <- format(round(f, digits = 2), nsmall = 2)
-		fp <- format(round(fp, digits = 2), nsmall = 2)
-		fsum <- paste0("F(",fdf1, ", ",fdf2, ") = ", f, ", p = ", fp)
+		f <- format(round(f, digits = 3), nsmall = 3)
+		fp <- format(round(fp, digits = 3), nsmall = 3)
+		fsum <- paste0("<i>F</i>(",fdf1, ", ",fdf2, ") = ", f, ", <i>p</i> = ", fp)
 		
 		nobs <- length(coef(mod())) + modsum()$fstatistic[3]
 		nobs <- paste0("Number of observations: ", nobs)
@@ -895,11 +899,10 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	})
 	
 	modTable <- renderTable({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', 
-			(input$x1 != input$x2), (input$x1 != input$y), (input$x2 != input$y))
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
 		modtable <- unlist(modsum()[4])
 		modtable <- data.frame(matrix(modtable, ncol = 4))
-		modtable <- format(round(modtable, digits = 2), nsmall = 2)
+		modtable <- format(round(modtable, digits = 3), nsmall = 3)
 		modtable <- cbind(names(coef(mod())), modtable)
 		colnames(modtable) <- c(" ", "Est.","SE", "t-value","p-value")
 		return(modtable)
@@ -917,13 +920,15 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 		length(coef(mod()))
 	})
 	
-	# x1 as mod: -Bx1/Bx1*x3, plot on x2
+	# x1 as mod: -Bx1/Bx1*x2, plot on x2
 	coonx2 <- reactive({
 		mod <- mod()
 		coonx2 <- -coef(mod)[2]/coef(mod)[ncoef()]
 		if(coonx2 >= minx2() & coonx2 <= maxx2()) {
 			coonx2 <- as.numeric(coonx2)
-		} else {coonx2 <- NA}
+		} else {
+			coonx2 <- NA
+		}
 	})
 	
 	# predicted y at crossover
@@ -944,16 +949,20 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 				names(newdatacoonx2y) <- c(input$x1, input$x2, input$cov)
 			}
 			predict.lm(mod(), newdatacoonx2y)
+		} else {
+			coonx2y <- NA
 		}
 	})
 	
-	# x2 as mod: # x2 as mod: -Bx2/Bx1*x3, plot on x1
+	# x2 as mod: -Bx2/Bx1*x2, plot on x1
 	coonx1 <- reactive({
 		mod <- mod()
 		coonx1 <- -coef(mod)[3]/coef(mod)[ncoef()]
 		if(coonx1 >= minx1() & coonx1 <= maxx1()) {
 			coonx1 <- as.numeric(coonx1)
-		} else {coonx1 <- NA}
+		} else {
+			coonx1 <- NA
+		}
 	})
 	
 	# predicted y at crossover
@@ -974,6 +983,8 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 				names(newdatacoonx1y) <- c(input$x1, input$x2, input$cov)
 			}
 			predict.lm(mod(), newdatacoonx1y)
+		} else {
+			coonx1y <- NA
 		}
 	})
 	
@@ -1003,6 +1014,7 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	# when x1 is mod
 	jnmx1 <- reactive({
 		johnson_neyman(mod(), pred = input$x2, modx = input$x1,
+			sig.color = "#749702", insig.color = "#b3b2b2",
 			mod.range = c(minx1(), maxx1()), alpha = 0.05, plot = TRUE)
 	})
 	
@@ -1010,18 +1022,23 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	jnmx1.1 <- reactive({
 		if(jnmx1()$bounds[1] >= minx1() & jnmx1()$bounds[1] <= maxx1()) {
 			jnmx1.1 <- as.numeric(jnmx1()$bounds[1])
-		} else {jnmx1.1 <- NA}
+		} else {
+			jnmx1.1 <- NA
+		}
 	})
 	
 	jnmx1.2 <- reactive({
 		if(jnmx1()$bounds[2] >= minx1() & jnmx1()$bounds[2] <= maxx1()) {
 			jnmx1.2 <- as.numeric(jnmx1()$bounds[2])
-		} else {jnmx1.2 <- NA}
+		} else {
+			jnmx1.2 <- NA
+		}
 	})
 	
 	# when x2 is mod
 	jnmx2 <- reactive({
 		johnson_neyman(mod(), pred = input$x1, modx = input$x2,
+			sig.color = "#3366ff", insig.color = "#b3b2b2",
 			mod.range = c(minx2(), maxx2()), alpha = 0.05, plot = TRUE)
 	})
 	
@@ -1029,78 +1046,131 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	jnmx2.1 <- reactive({
 		if(jnmx2()$bounds[1] >= minx2() & jnmx2()$bounds[1] <= maxx2()) {
 			jnmx2.1 <- as.numeric(jnmx2()$bounds[1])
-		} else {jnmx2.1 <- NA}
+		} else {
+			jnmx2.1 <- NA
+		}
 	})
 	
 	jnmx2.2 <- reactive({
 		if(jnmx2()$bounds[2] >= minx2() & jnmx2()$bounds[2] <= maxx2()) {
 			jnmx2.2 <- as.numeric(jnmx2()$bounds[2])
-		} else {jnmx2.2 <- NA}
+		} else {
+			jnmx2.2 <- NA
+		}
 	})
 	
 	# jn confidence band tables -----------------------------------------------
 	jnmx1cb <- reactive({
-		johnson_neyman_veccb2(mod(), pred = input$x2, modx = input$x1, 
-			mod.range = c(minx1(), maxx1()), alpha = 0.05, plot = FALSE, vec = vecx1())$cbands
+		johnson_neyman_veccb2(mod(), pred = input$x2, modx = input$x1,  alpha = 0.05, 
+			mod.range = c(minx1(), maxx1()), plot = FALSE, vec = vecx1())$cbands
 	})
 	
 	jnmx2cb <- reactive({
-		johnson_neyman_veccb2(mod(), pred = input$x1, modx = input$x2, 
-			mod.range = c(minx2(), maxx2()), alpha = 0.05, plot = FALSE, vec = vecx2())$cbands
+		johnson_neyman_veccb2(mod(), pred = input$x1, modx = input$x2, alpha = 0.05, 
+			mod.range = c(minx2(), maxx2()), plot = FALSE, vec = vecx2())$cbands
 	})
 	
 	# johnson neyman output ---------------------------------------------------
-	output$jnmx1Plot <- renderPlot({
-		jnmx1()$plot
-	})
-	
-	output$jnmx1Info <- renderPrint({
-		jnmx1()
-	})
-	
-	output$jnmx2.matlot <- renderPlot({
-		jnmx2()$plot
-	})
-	
-	output$jnmx2Info <- renderPrint({
-		jnmx2()
-	})
-	
-	output$plot3dPlot <- renderPlotly({
-		plot3d()
-	})
-	
-	output$jnmx1cbInfo <- DT::renderDataTable({
-		jnmx1cb <- jnmx1cb()
-		jnmx1cb[,1:4] <- format(round(jnmx1cb[,1:4], digits = 2), nsmall = 2)
-		DT::datatable(jnmx1cb, options = list(lengthMenu = c(10,20,50, length(vecx1()))))
-	})
-	
-	output$mx1cbTitle <- renderUI({
+	# marginal effects plots
+	output$jnmx1Title <- renderUI({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
 		h5(paste0(input$x1, " as Moderator"))
 	})
 	
-	output$jnmx2cbInfo <- DT::renderDataTable({
-		jnmx2cb <- jnmx2cb()
-		jnmx2cb[,1:4] <- format(round(jnmx2cb[,1:4], digits = 2), nsmall = 2)
-		DT::datatable(jnmx2cb, options = list(lengthMenu = c(10,20,50, length(vecx2()))))
+	output$jnmx1Plot <- renderPlot({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & mx1.ROS.none() == FALSE) {
+			jnmx1()$plot
+		} 
 	})
 	
-	output$mx2cbTitle <- renderUI({
+	output$jnmx1Info <- renderPrint({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & mx1.ROS.none() == FALSE) {
+			jnmx1()
+		} else {
+			HTML(paste0("The interaction term is not significant and/or there is no region of significance within the range of ", input$x1,"."))
+		}
+	})
+	
+	output$jnmx2Title <- renderUI({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
 		h5(paste0(input$x2, " as Moderator"))
 	})
 	
-	# j-n text output ---------------------------------------------------------
+	output$jnmx2Plot <- renderPlot({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & mx2.ROS.none() == FALSE) {
+			jnmx2()$plot
+		}
+	})
+	
+	output$jnmx2Info <- renderPrint({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & mx2.ROS.none() == FALSE) {
+			jnmx2()
+		} else {
+			HTML(paste0("The interaction term is not significant and/or there is no region of significance within the range of ", input$x2,"."))
+		}
+	})
+	
+	
+	# confidence band tables
+	output$mx1cbTitle <- renderUI({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		h5(paste0(input$x1, " as Moderator"))
+	})
+	
+	output$jnmx1cbInfo <- DT::renderDataTable({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & mx1.ROS.none() == FALSE) {
+			jnmx1cb <- jnmx1cb()
+			jnmx1cb[,1:4] <- format(round(jnmx1cb[,1:4], digits = 3), nsmall = 3)
+			DT::datatable(jnmx1cb, options = list(lengthMenu = c(10,20,50, length(vecx1()))))
+		}
+	})
+	output$jnmx1Text <- renderPrint({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == FALSE | mx1.ROS.none() == TRUE) {
+			HTML(paste0("The interaction term is not significant and/or there is no region of significance within the range of ", input$x1,"."))
+		}
+	})
+	
+	output$mx2cbTitle <- renderUI({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		h5(paste0(input$x2, " as Moderator"))
+	})
+	
+	output$jnmx2cbInfo <- DT::renderDataTable({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & mx2.ROS.none() == FALSE) {
+			jnmx2cb <- jnmx2cb()
+			jnmx2cb[,1:4] <- format(round(jnmx2cb[,1:4], digits = 3), nsmall = 3)
+			DT::datatable(jnmx2cb, options = list(lengthMenu = c(10,20,50, length(vecx2()))))
+		}
+	})
+	
+	output$jnmx2Text <- renderPrint({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == FALSE | mx2.ROS.none() == TRUE) {
+			HTML(paste0("The interaction term is not significant and/or there is no region of significance within the range of ", input$x2,"."))
+		}
+	})
+	
+	# johnson neyman and crossover text output for main tab ---------------------------------------------------------
 	output$jnmx1.sum <- renderUI({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
-			(input$x1 != input$y), (input$x2 != input$y))
-		if(intsig() == TRUE & (!is.na(jnmx1.1()) | !is.na(jnmx1.2()))) {
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
+		if(intsig() == TRUE & mx1.ROS.none() == FALSE) {
 			
 			# get sign of slope at jn bounds
-			jnmx1.1sl <- sign(jnmx1cb()[jnmx1.1rn(), 2])
+			if (mx1.ROS.all() == TRUE) {
+				jnmx1.1sl <- sign(jnmx1cb()[1, 2])
+				jnmx1.2sl <- sign(jnmx1cb()[nrow(jnmx1cb()), 2])
+			} else {
+				jnmx1.1sl <- sign(jnmx1cb()[jnmx1.1rn(), 2])
+				jnmx1.2sl <- sign(jnmx1cb()[jnmx1.2rn(), 2])
+			}
 			jnmx1.1sl <- ifelse(jnmx1.1sl > 0, "positive", "negative")
-			
-			jnmx1.2sl <- sign(jnmx1cb()[jnmx1.2rn(), 2])
 			jnmx1.2sl <- ifelse(jnmx1.2sl > 0, "positive", "negative")
 			
 			# set values for text printing
@@ -1111,7 +1181,7 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 			jnmx1.slest <- c(jnmx1cb()[jnmx1.1rn(), 2], jnmx1cb()[jnmx1.2rn(), 2]) # slope at jn bounds
 			minmaxx1 <- c(jnmx1cb()[1, 1], jnmx1cb()[nrow(jnmx1cb()), 1]) # min max of mod
 			jnmx1.slestminmax <- c(jnmx1cb()[1, 2], jnmx1cb()[nrow(jnmx1cb()), 2]) # slope at min max of mod
-			obsorjnmx1 <- c(" (minimum observed value)", " (maximum observed value)", " (J-N bound)")
+			obsorjnmx1 <- c(" (minimum)", " (maximum)", " (J-N bound)")
 			
 			# formatting
 			jnmx1.val <- format(round(jnmx1.val, digits = 2), nsmall = 2)
@@ -1120,79 +1190,88 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 			jnmx1.slestminmax <- format(round(jnmx1.slestminmax, digits = 2), nsmall = 2)
 			
 			# jn text summary
-			if(jnmx1.inside() == FALSE) {
-				if(is.na(jnmx1.1()) & !is.na(jnmx1.2())) { # high band / outside
-					jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.2()))
-					jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
-					jnmx1.sum <- list(jnmx1.sl[2], jnmx1.slest[2], jnmx1.slestminmax[2], jnmx1.sign[1], jnmx1.val[2],
-						jnmx1.sign[2], minmaxx1[2], obsorjnmx1[3], obsorjnmx1[2])
-				} else {
-					if(!is.na(jnmx1.1()) & is.na(jnmx1.2())) { # low band / outside
-						jnmx1.prop <- prop.table(table(df.std()[,input$x1] <= jnmx1.1()))
+			if(mx1.ROS.all() == TRUE) { # ROS covers whole range of mod
+				jnmx1.sum <- list(jnmx1.sl[1], jnmx1.slestminmax[1], jnmx1.slestminmax[2], minmaxx1[1], minmaxx1[2],
+					obsorjnmx1[1], obsorjnmx1[2])
+			} else {
+				if(jnmx1.inside() == FALSE) { # ROS falls outside JN values
+					if(is.na(jnmx1.1()) & !is.na(jnmx1.2())) { # high band / outside
+						jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.2()))
 						jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
-						jnmx1.sum <- list(jnmx1.sl[1], jnmx1.slestminmax[1], jnmx1.slest[1], jnmx1.sign[1], minmaxx1[1],
-							jnmx1.sign[2], jnmx1.val[1], obsorjnmx1[1], obsorjnmx1[3])
-					} else { # high and low band / outside
-						if(!is.na(jnmx1.1()) & !is.na(jnmx1.2())) {
-							jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.1() & 
-									df.std()[,input$x1] <= jnmx1.2()))
+						jnmx1.sum <- list(jnmx1.sl[2], jnmx1.slest[2], jnmx1.slestminmax[2], jnmx1.sign[1], jnmx1.val[2],
+							jnmx1.sign[2], minmaxx1[2], obsorjnmx1[3], obsorjnmx1[2])
+					} else {
+						if(!is.na(jnmx1.1()) & is.na(jnmx1.2())) { # low band / outside
+							jnmx1.prop <- prop.table(table(df.std()[,input$x1] <= jnmx1.1()))
 							jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
-							jnmx1.sum <- list(jnmx1.sl[1], jnmx1.sign[1], minmaxx1[1], jnmx1.sign[2], jnmx1.val[1], 
-								jnmx1.slestminmax[1], jnmx1.slest[1], 
-								jnmx1.sl[2], jnmx1.sign[1], jnmx1.val[2], jnmx1.sign[2], minmaxx1[2], 
-								jnmx1.slest[2], jnmx1.slestminmax[2], obsorjnmx1[1], obsorjnmx1[3], obsorjnmx1[3], obsorjnmx1[2])
+							jnmx1.sum <- list(jnmx1.sl[1], jnmx1.slestminmax[1], jnmx1.slest[1], jnmx1.sign[1], minmaxx1[1],
+								jnmx1.sign[2], jnmx1.val[1], obsorjnmx1[1], obsorjnmx1[3])
+						} else { # high and low band / outside
+							if(!is.na(jnmx1.1()) & !is.na(jnmx1.2())) {
+								jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.1() & 
+										df.std()[,input$x1] <= jnmx1.2()))
+								jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
+								jnmx1.sum <- list(jnmx1.sl[1], jnmx1.sign[1], minmaxx1[1], jnmx1.sign[2], jnmx1.val[1], 
+									jnmx1.slestminmax[1], jnmx1.slest[1], 
+									jnmx1.sl[2], jnmx1.sign[1], jnmx1.val[2], jnmx1.sign[2], minmaxx1[2], 
+									jnmx1.slest[2], jnmx1.slestminmax[2], obsorjnmx1[1], obsorjnmx1[3], obsorjnmx1[3], obsorjnmx1[2])
+							}
+						}
+					}
+				} else { # ROS falls inside JN values
+					if(!is.na(jnmx1.1()) & !is.na(jnmx1.2())) { # (no squared terms allowed, center band not run)
+						jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.1() & 
+								df.std()[,input$x1] <= jnmx1.2()))
+						jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
+						jnmx1.sum <- list(jnmx1.sl, jnmx1.slest[1], jnmx1.slest[2], 
+							jnmx1.sign[1], jnmx1.val[1], jnmx1.sign[2], minmaxx1[2], obsorjnmx1[3], obsorjnmx1[3])
+					} else {
+						if(is.na(jnmx1.1()) & !is.na(jnmx1.2())) { # low band / inside
+							jnmx1.prop <- prop.table(table(df.std()[,input$x1] <= jnmx1.2()))
+							jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
+							jnmx1.sum <- list(jnmx1.sl[2], jnmx1.slestminmax[1], jnmx1.slest[2], jnmx1.sign[1], minmaxx1[1],
+								jnmx1.sign[2], jnmx1.val[2], obsorjnmx1[1], obsorjnmx1[3])
+						} else {
+							if (!is.na(jnmx1.1()) & is.na(jnmx1.2())) { # high band / inside
+								jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.1()))
+								jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
+								jnmx1.sum <- list(jnmx1.sl[1], jnmx1.slest[1], jnmx1.slestminmax[2], jnmx1.sign[1], jnmx1.val[1], 
+									jnmx1.sign[2], minmaxx1[2], obsorjnmx1[3], obsorjnmx1[2])
+							} 
 						}
 					}
 				}
-			} else { # center band
-				if(!is.na(jnmx1.1()) & !is.na(jnmx1.2())) {
-					jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.1() & 
-							df.std()[,input$x1] <= jnmx1.2()))
-					jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
-					jnmx1.sum <- list(jnmx1.sl, jnmx1.slest[1], jnmx1.slest[2], 
-						jnmx1.sign[1], jnmx1.val[1], jnmx1.sign[2], minmaxx1[2], obsorjnmx1[3], obsorjnmx1[3])
-				} else {
-					if(is.na(jnmx1.1()) & !is.na(jnmx1.2)) { # low band / inside
-						jnmx1.prop <- prop.table(table(df.std()[,input$x1] <= jnmx1.2()))
-						jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
-						jnmx1.sum <- list(jnmx1.sl[2], jnmx1.slestminmax[1], jnmx1.slest[1], jnmx1.sign[1], minmaxx1[1],
-							jnmx1.sign[2], jnmx1.val[2], obsorjnmx1[1], obsorjnmx1[3])
-					} else {
-						if (!is.na(jnmx1.1()) & is.na(jnmx1.2)) { # high band / inside
-							jnmx1.prop <- prop.table(table(df.std()[,input$x1] >= jnmx1.1()))
-							jnmx1.prop <- jnmx1.prop[dim(jnmx1.prop)]
-							jnmx1.sum <- list(jnmx1.sl[1], jnmx1.slest[1], jnmx1.slestminmax[2], jnmx1.sign[1], jnmx1.val[1], 
-								jnmx1.sign[2], minmaxx1[2], obsorjnmx1[3], obsorjnmx1[2])
-						} 
-					}
-				}
-				
 			}
 			
-			if (!is.na(jnmx1.1()) | !is.na(jnmx1.2())) {
-				jnmx1.perc <- jnmx1.prop*100
-				jnmx1.perc <- format(round(jnmx1.perc, digits = 2), nsmall = 2)
-				if (jnmx1.inside() == FALSE & !is.na(jnmx1.1()) & !is.na(jnmx1.2())) { # two ROS (high and low) 
+				if(mx1.ROS.all() == TRUE) {
 					jnmx1.text <- paste0("The relationship between ", input$x2, " and ", input$y,
-						" is significantly ", jnmx1.sum[1], " when ", input$x1,
-						jnmx1.sum[2], jnmx1.sum[3], jnmx1.sum[15], " and", jnmx1.sum[4], jnmx1.sum[5], jnmx1.sum[16],
-						" (slope estimate range: = ", jnmx1.sum[6], " to ", jnmx1.sum[7], ") and significantly ", jnmx1.sum[8], " when ",
-						input$x1, jnmx1.sum[9], jnmx1.sum[10],jnmx1.sum[17], " and ", jnmx1.sum[11], jnmx1.sum[12], jnmx1.sum[18],
-						" (slope estimate range: ", jnmx1.sum[13], " to ", jnmx1.sum[14], 
-						"). These regions of significance include ", jnmx1.perc, "% of the sample. ")
+						" is significantly ", jnmx1.sum[1], " across the entire range of ", input$x1, " (minimum: ",
+						jnmx1.sum[4], "; maximum: ", jnmx1.sum[5], "; slope estimate range: ", jnmx1.sum[2], " to " , jnmx1.sum[3],
+						"). This region of significance includes 100.00% of the sample.")
 				} else {
-					jnmx1.text <- paste0("When ", input$x1,	jnmx1.sum[4], jnmx1.sum[5], jnmx1.sum[8], " and", jnmx1.sum[6], jnmx1.sum[7], jnmx1.sum[9],
-						", the relationship between ", input$x2, " and ", input$y,
-						" is significantly ", jnmx1.sum[1], " (slope estimate range: ", jnmx1.sum[2], 
-						" to ", jnmx1.sum[3], "). This region of significance includes ", jnmx1.perc, "% of the sample. ")
+					jnmx1.perc <- jnmx1.prop*100
+					jnmx1.perc <- format(round(jnmx1.perc, digits = 2), nsmall = 2)
+					if (jnmx1.inside() == FALSE & !is.na(jnmx1.1()) & !is.na(jnmx1.2())) { # two ROS (high and low) 
+						jnmx1.text <- paste0("The relationship between ", input$x2, " and ", input$y,
+							" is significantly ", jnmx1.sum[1], " when ", input$x1,
+							jnmx1.sum[2], jnmx1.sum[3], jnmx1.sum[15], " and", jnmx1.sum[4], jnmx1.sum[5], jnmx1.sum[16],
+							" (slope estimate range: = ", jnmx1.sum[6], " to ", jnmx1.sum[7], ") and significantly ", jnmx1.sum[8], " when ",
+							input$x1, jnmx1.sum[9], jnmx1.sum[10],jnmx1.sum[17], " and ", jnmx1.sum[11], jnmx1.sum[12], jnmx1.sum[18],
+							" (slope estimate range: ", jnmx1.sum[13], " to ", jnmx1.sum[14], 
+							"). These regions of significance include ", jnmx1.perc, "% of the sample. ")
+					} else { # one ROS
+						jnmx1.text <- paste0("When ", input$x1,	jnmx1.sum[4], jnmx1.sum[5], jnmx1.sum[8], " and", jnmx1.sum[6], jnmx1.sum[7], jnmx1.sum[9],
+							", the relationship between ", input$x2, " and ", input$y,
+							" is significantly ", jnmx1.sum[1], " (slope estimate range: ", jnmx1.sum[2], 
+							" to ", jnmx1.sum[3], "). This region of significance includes ", jnmx1.perc, "% of the sample. ")
+					}
 				}
-			}
 		} else {
 			jnmx1.text <- paste0("The relationship between ", input$x2, " and ", input$y, " is not significantly different from zero ",
 				"at any value of ", input$x1, ".")
 		}
 		
-		if (!is.na(coonx1()) & intsig() == TRUE) {
+		if (!is.na(coonx1())) {
 			coonx1 <- format(round(coonx1(), digits = 2), nsmall = 2)
 			coonx1.text <- paste0("Crossover point: ", coonx1)
 		} else {
@@ -1204,15 +1283,18 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	})
 	
 	output$jnmx2.sum <- renderUI({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
-			(input$x1 != input$y), (input$x2 != input$y))
-		if(intsig() == TRUE & (!is.na(jnmx2.1()) | !is.na(jnmx2.2()))) {
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
+		if(intsig() == TRUE & mx2.ROS.none() == FALSE) {
 			
 			# get sign of slope at jn bounds
-			jnmx2.1sl <- sign(jnmx2cb()[jnmx2.1cn(), 2])
+			if (mx2.ROS.all() == TRUE) {
+				jnmx2.1sl <- sign(jnmx2cb()[1, 2])
+				jnmx2.2sl <- sign(jnmx2cb()[nrow(jnmx2cb()), 2])
+			} else {
+				jnmx2.1sl <- sign(jnmx2cb()[jnmx2.1cn(), 2])
+				jnmx2.2sl <- sign(jnmx2cb()[jnmx2.2cn(), 2])
+			}
 			jnmx2.1sl <- ifelse(jnmx2.1sl > 0, "positive", "negative")
-			
-			jnmx2.2sl <- sign(jnmx2cb()[jnmx2.2cn(), 2])
 			jnmx2.2sl <- ifelse(jnmx2.2sl > 0, "positive", "negative")
 			
 			# set values for text printing 
@@ -1223,7 +1305,7 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 			jnmx2.slest <- c(jnmx2cb()[jnmx2.1cn(), 2], jnmx2cb()[jnmx2.2cn(), 2]) # slope at jn bounds
 			minmaxx2 <- c(jnmx2cb()[1, 1], jnmx2cb()[nrow(jnmx2cb()), 1]) # min max of mod
 			jnmx2.slestminmax <- c(jnmx2cb()[1, 2], jnmx2cb()[nrow(jnmx2cb()), 2]) # slope at min max of mod
-			obsorjnmx2 <- c(" (minimum observed value)", " (maximum observed value)", " (J-N bound)")
+			obsorjnmx2 <- c(" (minimum)", " (maximum)", " (J-N bound)")
 			
 			# formatting
 			jnmx2.val <- format(round(jnmx2.val, digits = 2), nsmall = 2)
@@ -1232,55 +1314,65 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 			jnmx2.slestminmax <- format(round(jnmx2.slestminmax, digits = 2), nsmall = 2)
 			
 			# jn text summary
-			if(jnmx2.inside() == FALSE) {
-				if(is.na(jnmx2.1()) & !is.na(jnmx2.2())) { # high band / outside
-					jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.2()))
-					jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
-					jnmx2.sum <- list(jnmx2.sl[2], jnmx2.slest[2], jnmx2.slestminmax[2], jnmx2.sign[1], jnmx2.val[2],
-						jnmx2.sign[2], minmaxx2[2], obsorjnmx2[3], obsorjnmx2[2])
-				} else {
-					if(!is.na(jnmx2.1()) & is.na(jnmx2.2())) { # low band / outside
-						jnmx2.prop <- prop.table(table(df.std()[,input$x2] <= jnmx2.1()))
+			if(mx2.ROS.all() == TRUE) { # ROS covers whole range of mod
+				jnmx2.sum <- list(jnmx2.sl[1], jnmx2.slestminmax[1], jnmx2.slestminmax[2], minmaxx2[1], minmaxx2[2],
+					obsorjnmx2[1], obsorjnmx2[2])
+			} else {
+				if(jnmx2.inside() == FALSE) { # ROS falls outside JN values
+					if(is.na(jnmx2.1()) & !is.na(jnmx2.2())) { # high band / outside
+						jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.2()))
 						jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
-						jnmx2.sum <- list(jnmx2.sl[1], jnmx2.slestminmax[1], jnmx2.slest[1], jnmx2.sign[1], minmaxx2[1],
-							jnmx2.sign[2], jnmx2.val[1], obsorjnmx2[1], obsorjnmx2[3])
-					} else { # high and low band / outside
-						if(!is.na(jnmx2.1()) & !is.na(jnmx2.2())) {
-							jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.1() & 
-									df.std()[,input$x2] <= jnmx2.2()))
+						jnmx2.sum <- list(jnmx2.sl[2], jnmx2.slest[2], jnmx2.slestminmax[2], jnmx2.sign[1], jnmx2.val[2],
+							jnmx2.sign[2], minmaxx2[2], obsorjnmx2[3], obsorjnmx2[2])
+					} else {
+						if(!is.na(jnmx2.1()) & is.na(jnmx2.2())) { # low band / outside
+							jnmx2.prop <- prop.table(table(df.std()[,input$x2] <= jnmx2.1()))
 							jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
-							jnmx2.sum <- list(jnmx2.sl[1], jnmx2.sign[1], minmaxx2[1], jnmx2.sign[2], jnmx2.val[1], 
-								jnmx2.slestminmax[1], jnmx2.slest[1], 
-								jnmx2.sl[2], jnmx2.sign[1], jnmx2.val[2], jnmx2.sign[2], minmaxx2[2], 
-								jnmx2.slest[2], jnmx2.slestminmax[2], obsorjnmx2[1], obsorjnmx2[3], obsorjnmx2[3], obsorjnmx2[2])
+							jnmx2.sum <- list(jnmx2.sl[1], jnmx2.slestminmax[1], jnmx2.slest[1], jnmx2.sign[1], minmaxx2[1],
+								jnmx2.sign[2], jnmx2.val[1], obsorjnmx2[1], obsorjnmx2[3])
+						} else { # high and low band / outside
+							if(!is.na(jnmx2.1()) & !is.na(jnmx2.2())) {
+								jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.1() & 
+										df.std()[,input$x2] <= jnmx2.2()))
+								jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
+								jnmx2.sum <- list(jnmx2.sl[1], jnmx2.sign[1], minmaxx2[1], jnmx2.sign[2], jnmx2.val[1], 
+									jnmx2.slestminmax[1], jnmx2.slest[1], 
+									jnmx2.sl[2], jnmx2.sign[1], jnmx2.val[2], jnmx2.sign[2], minmaxx2[2], 
+									jnmx2.slest[2], jnmx2.slestminmax[2], obsorjnmx2[1], obsorjnmx2[3], obsorjnmx2[3], obsorjnmx2[2])
+							}
 						}
 					}
-				}
-			} else { # center band
-				if(!is.na(jnmx2.1()) & !is.na(jnmx2.2())) {
-					jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.1() & 
-							df.std()[,input$x2] <= jnmx2.2()))
-					jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
-					jnmx2.sum <- list(jnmx2.sl[1], jnmx2.slest[1], jnmx2.slest[2], 
-						jnmx2.sign[1], jnmx2.val[1], jnmx2.sign[2], minmaxx2[2], obsorjnmx1[3], obsorjnmx1[3])
-				} else {
-					if(is.na(jnmx2.1()) & !is.na(jnmx2.2)) { # low band / inside
-						jnmx2.prop <- prop.table(table(df.std()[,input$x2] <= jnmx2.2()))
+				} else { # ROS falls inside JN values
+					if(!is.na(jnmx2.1()) & !is.na(jnmx2.2())) { # (no squared terms allowed, center band not run)
+						jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.1() & 
+								df.std()[,input$x2] <= jnmx2.2()))
 						jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
-						jnmx2.sum <- list(jnmx2.sl[2], jnmx2.slestminmax[1], jnmx2.slest[1], jnmx2.sign[1], minmaxx2[1],
-							jnmx2.sign[2], jnmx2.val[2], obsorjnmx2[1], obsorjnmx2[3])
+						jnmx2.sum <- list(jnmx2.sl[1], jnmx2.slest[1], jnmx2.slest[2], 
+							jnmx2.sign[1], jnmx2.val[1], jnmx2.sign[2], minmaxx2[2], obsorjnmx2[3], obsorjnmx2[3])
 					} else {
-						if (!is.na(jnmx2.1()) & is.na(jnmx2.2)) { # high band / inside
-							jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.1()))
+						if(is.na(jnmx2.1()) & !is.na(jnmx2.2())) { # low band / inside
+							jnmx2.prop <- prop.table(table(df.std()[,input$x2] <= jnmx2.2()))
 							jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
-							jnmx2.sum <- list(jnmx2.sl[1], jnmx2.slest[1], jnmx2.slestminmax[2], jnmx2.sign[1], jnmx2.val[1], 
-								jnmx2.sign[2], minmaxx2[2], obsorjnmx2[3], obsorjnmx2[2])
+							jnmx2.sum <- list(jnmx2.sl[2], jnmx2.slestminmax[1], jnmx2.slest[2], jnmx2.sign[1], minmaxx2[1],
+								jnmx2.sign[2], jnmx2.val[2], obsorjnmx2[1], obsorjnmx2[3])
+						} else {
+							if (!is.na(jnmx2.1()) & is.na(jnmx2.2())) { # high band / inside
+								jnmx2.prop <- prop.table(table(df.std()[,input$x2] >= jnmx2.1()))
+								jnmx2.prop <- jnmx2.prop[dim(jnmx2.prop)]
+								jnmx2.sum <- list(jnmx2.sl[1], jnmx2.slest[1], jnmx2.slestminmax[2], jnmx2.sign[1], jnmx2.val[1], 
+									jnmx2.sign[2], minmaxx2[2], obsorjnmx2[3], obsorjnmx2[2])
+							}
 						}
 					}
 				}
 			}
 			
-			if (!is.na(jnmx2.1()) | !is.na(jnmx2.2())) {
+			if(mx2.ROS.all() == TRUE) {
+				jnmx2.text <- paste0("The relationship between ", input$x1, " and ", input$y,
+					" is significantly ", jnmx2.sum[1], " across the entire range of ", input$x2, " (minimum: ",
+					jnmx2.sum[4], "; maximum: ", jnmx2.sum[5], "; slope estimate range: ", jnmx2.sum[2], " to " , jnmx2.sum[3],
+					"). This region of significance includes 100.00% of the sample.")
+			} else {
 				jnmx2.perc <- jnmx2.prop*100
 				jnmx2.perc <- format(round(jnmx2.perc, digits = 2), nsmall = 2)
 				if (jnmx2.inside() == FALSE & !is.na(jnmx2.1()) & !is.na(jnmx2.2())) { # two ROS (high and low) # NEED TO FIX
@@ -1303,7 +1395,7 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 				"at any value of ", input$x2, ".")
 		}
 		
-		if (!is.na(coonx2()) & intsig() == TRUE) {
+		if (!is.na(coonx2())) {
 			coonx2 <- format(round(coonx2(), digits = 2), nsmall = 2)
 			coonx2.text <- paste0("Crossover point: ", coonx2)
 		} else {
@@ -1403,144 +1495,328 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	
 	
 	# create jn ROS planes ----------------------------------------------------
+	
 	# for x1 as mod
-	pm.rn <- reactive({
-		pm.rn <- rownames(pm())
-		pm.rn <- as.numeric(pm.rn)
-	})
-	
-	jnmx1.1rn <- reactive({
-		jnmx1.1rn <- match(jnmx1.1(), rownames(pm()))
-	})
-	
-	jnmx1.2rn <- reactive({
-		jnmx1.2rn <- match(jnmx1.2(), rownames(pm()))
-	})
-	
 	# identify whether ROS is inside j-n values
 	jnmx1.inside <- reactive({
 		johnson_neyman_inside(mod(), pred = input$x2, modx = input$x1, 
 			mod.range = c(minx1(), maxx1()), alpha = 0.05)
 	})
 	
+	# identify whether ROS covers whole range of x1
+	mx1.ROS.all <- reactive({
+		if((jnmx1.inside() == FALSE & (jnmx1()$bounds[2] < minx1() | jnmx1()$bounds[1] > maxx1())) |
+				(jnmx1.inside() == TRUE & jnmx1()$bounds[1] < minx1() & jnmx1()$bounds[2] > maxx1())) {
+			mx1.ROS.all <- TRUE
+			mx1.ROS.all
+		} else {
+			mx1.ROS.all <- FALSE
+			mx1.ROS.all
+		}
+	})
+	
+	# identify whether ROS within range of x1
+	mx1.ROS.none <- reactive({
+		if((is.na(jnmx1.1()) & is.na(jnmx1.2())) & mx1.ROS.all() == FALSE) {
+			mx1.ROS.none <- TRUE
+			mx1.ROS.none
+		} else {
+			mx1.ROS.none <- FALSE
+			mx1.ROS.none
+		}
+	})
+	
+	# identify row number of jn values
+	jnmx1.1rn <- reactive({
+		jnmx1.1rn <- match(jnmx1.1(), vecx1())
+	})
+	
+	jnmx1.2rn <- reactive({
+		jnmx1.2rn <- match(jnmx1.2(), vecx1())
+	})
+	
+	# make x1 ROS planes
 	pm.mx1.wROS <- reactive({
-		if ((!is.na(jnmx1.1()) | !is.na(jnmx1.2())) & intsig() == TRUE) {
+		if (mx1.ROS.none() == FALSE & intsig() == TRUE) {
+			
 			pm <- pm()
 			jnmx1.1 <- jnmx1.1()
 			jnmx1.2 <- jnmx1.2()
+			vecx1 <- vecx1()
+			vecx2 <- vecx2()
 			
-			pm.nrow <- nrow(pm)
-			pm.ncol <- ncol(pm)
-			
-			jnmx1.1rn <- jnmx1.1rn()
-			jnmx1.2rn <- jnmx1.2rn()
-			
-			# if inside j-n values
-			pm.mx1.ROS1i <- if(jnmx1.inside() == TRUE) {
-				pm[jnmx1.1rn:jnmx1.2rn,]
-			} 
-			
-			# if outside j-n values
-			pm.mx1.ROS1o <- if(jnmx1.inside() == FALSE & !is.na(jnmx1.1)) {
-				pm[pm.rn() <= jnmx1.1,] 
-			}
-			pm.mx1.ROS2o <- if(jnmx1.inside() == FALSE & !is.na(jnmx1.2)) {
-				pm[pm.rn() >= jnmx1.2,] 
+			# ROS covers whole range
+			if(mx1.ROS.all()==TRUE) {
+				pm.mx1.wROS <- pm() 
 			}
 			
-			# bind together ROS with pad as needed
-			if(!is.na(jnmx1.1) & !is.na(jnmx1.2)) {
-				mx1.pad <- matrix(nrow = pm.nrow - nrow(pm.mx1.ROS1o) - nrow(pm.mx1.ROS2o), ncol = pm.ncol)
-				pm.mx1.wROS <- rbind(pm.mx1.ROS1o, mx1.pad, pm.mx1.ROS2o)
-			} else {
-				if (!is.na(jnmx1.1) & is.na(jnmx1.2)) {
-					mx1.pad <- matrix(nrow = pm.nrow - nrow(pm.mx1.ROS1o), ncol = pm.ncol)
-					pm.mx1.wROS <- rbind(pm.mx1.ROS1o, mx1.pad)
-				} else {
-					if (is.na(jnmx1.1) & !is.na(jnmx1.2)) {
-						mx1.pad <- matrix(nrow = pm.nrow - nrow(pm.mx1.ROS2o), ncol = pm.ncol)
-						pm.mx1.wROS <- rbind(mx1.pad, pm.mx1.ROS2o)
-					}
+			# ROS inside JN bounds
+			if(jnmx1.inside() == TRUE) {
+				# inside both j-n values (center band) (not run, program does not accept squared terms)
+				if(!is.na(jnmx1.1) & !is.na(jnmx1.2)) {
+					pm.mx1.ROS1i <- pm[vecx1 >= jnmx1.1 & vecx1 <= jnmx1.2,]
+					mx1.pad1 <- matrix(nrow = jnmx1.1rn(), ncol = ncol(pm)) # lower pad made of NAs
+					mx1.pad2 <- matrix(nrow = nrow(pm) - jnmx1.2rn(), ncol = ncol(pm)) # upper pad  made of NAs
+					pm.mx1.wROS <- rbind(mx1.pad1, pm.mx1.ROS1i, mx1.pad2)
+				}
+				# lower JN bound within range (high band)
+				if(!is.na(jnmx1.1) & is.na(jnmx1.2)) {
+					pm.mx1.ROS1i <- pm[vecx1 >= jnmx1.1,]  # ROS covers first JN bound through maximum 
+					mx1.pad <- matrix(nrow = nrow(pm) - nrow(pm.mx1.ROS1i), ncol = ncol(pm))
+					pm.mx1.wROS <- rbind(mx1.pad, pm.mx1.ROS1i)
+				}
+				# upper JN bound within range (low band)
+				if(!is.na(jnmx1.2) & is.na(jnmx1.1)) {
+					pm.mx1.ROS2i <- pm[vecx1 <= jnmx1.2,] # ROS covers minimum through second JN bound
+					mx1.pad <- matrix(nrow = nrow(pm) - nrow(pm.mx1.ROS2i), ncol = ncol(pm))
+					pm.mx1.wROS <- rbind(pm.mx1.ROS2i, mx1.pad)
 				}
 			}
-			rownames(pm.mx1.wROS) <- vecx1()
-			colnames(pm.mx1.wROS) <- vecx2()
+			
+			# ROS outside JN bounds
+			if(jnmx1.inside() == FALSE) {
+				# first JN bound within range (low band)
+				if(!is.na(jnmx1.1)) { 
+					pm.mx1.ROS1o <- pm[vecx1 <= jnmx1.1,] # ROS covers minimum through first JN bound
+				}
+				# second JN bound within range (high band)
+				if(!is.na(jnmx1.2)) { 
+					pm.mx1.ROS2o <- pm[vecx1 >= jnmx1.2,] # ROS covers JN bound through maximum
+				}
+				
+				# combining with pads
+				# both within range (low and high)
+				if(!is.na(jnmx1.1) & !is.na(jnmx1.2)) { 
+					mx1.pad <- matrix(nrow = nrow(pm) - nrow(pm.mx1.ROS1o) - nrow(pm.mx1.ROS2o), ncol = ncol(pm)) # pad made of NAs
+					pm.mx1.wROS <- rbind(pm.mx1.ROS1o, mx1.pad, pm.mx1.ROS2o) # pad between ROS with extra rows
+				} 
+				# first within range only (low band only)
+				if (!is.na(jnmx1.1) & is.na(jnmx1.2)) { 
+					mx1.pad <- matrix(nrow = nrow(pm) - nrow(pm.mx1.ROS1o), ncol = ncol(pm))
+					pm.mx1.wROS <- rbind(pm.mx1.ROS1o, mx1.pad)
+				}
+				# second within range only (high band only)
+				if (is.na(jnmx1.1) & !is.na(jnmx1.2)) { 
+					mx1.pad <- matrix(nrow = nrow(pm) - nrow(pm.mx1.ROS2o), ncol = ncol(pm))
+					pm.mx1.wROS <- rbind(mx1.pad, pm.mx1.ROS2o)
+				}
+			}
+			# add vector values to row and column names of matrix
+			rownames(pm.mx1.wROS) <- vecx1
+			colnames(pm.mx1.wROS) <- vecx2
 			pm.mx1.wROS
 		} else {
 			NULL
 		}
 	})
 	
+	
 	# for x2 as mod
-	pm.cn <- reactive({
-		pm.cn <- colnames(pm())
-		pm.cn <- as.numeric(pm.cn)
-	})
-	
-	jnmx2.1cn <- reactive({
-		jnmx2.1cn <- match(jnmx2.1(), colnames(pm()))
-	})
-	
-	jnmx2.2cn <- reactive({
-		jnmx2.2cn <- match(jnmx2.2(), colnames(pm()))
-	})
-	
 	# identify whether ROS is inside j-n values
 	jnmx2.inside <- reactive({
 		johnson_neyman_inside(mod(), pred = input$x1, modx = input$x2, 
 			mod.range = c(minx2(), maxx2()), alpha = 0.05)
 	})
 	
+	# identify whether ROS covers whole range of x2
+	mx2.ROS.all <-reactive({
+		if((jnmx2.inside() == FALSE & (jnmx2()$bounds[2] < minx2() | jnmx2()$bounds[1] > maxx2())) |
+				(jnmx2.inside() == TRUE & jnmx2()$bounds[1] < minx2() & jnmx2()$bounds[2] > maxx2())) {
+			mx2.ROS.all <- TRUE
+			mx2.ROS.all
+		} else {
+			mx2.ROS.all <- FALSE
+			mx2.ROS.all
+		}
+	})
+	
+	# identify whether ROS within range of x2
+	mx2.ROS.none <- reactive({
+		if((is.na(jnmx2.1()) & is.na(jnmx2.2())) & mx2.ROS.all() == FALSE) {
+			mx2.ROS.none <- TRUE
+			mx2.ROS.none
+		} else {
+			mx2.ROS.none <- FALSE
+			mx2.ROS.none
+		}
+	})
+	
+	# identify column number of jn bounds
+	jnmx2.1cn <- reactive({
+		jnmx2.1cn <- match(jnmx2.1(), vecx2())
+	})
+	
+	jnmx2.2cn <- reactive({
+		jnmx2.2cn <- match(jnmx2.2(), vecx2())
+	})
+	
+	
+	# make x2 ROS planes
 	pm.mx2.wROS <- reactive({
-		if ((!is.na(jnmx2.1()) | !is.na(jnmx2.2())) & intsig() == TRUE) {
+		if (mx2.ROS.none() == FALSE & intsig() == TRUE) {
+			
 			pm <- pm()
 			jnmx2.1 <- jnmx2.1()
 			jnmx2.2 <- jnmx2.2()
+			vecx1 <- vecx1()
+			vecx2 <- vecx2()
 			
-			pm.nrow <- nrow(pm)
-			pm.ncol <- ncol(pm)
-			
-			jnmx2.1cn <- jnmx2.1cn()
-			jnmx2.2cn <- jnmx2.2cn()
-			
-			# if inside j-n values
-			pm.mx2.ROS1i <- if(jnmx2.inside() == TRUE) {
-				pm[ ,jnmx2.1cn:jnmx2.2cn]
+			# ROS covers whole range
+			if(mx2.ROS.all()==TRUE) {
+				pm.mx2.wROS <- pm() 
 			}
 			
-			# if outside j-n values
-			pm.mx2.ROS1o <- if(jnmx2.inside() == FALSE) {
-				pm[,pm.cn() <= jnmx2.1] 
-			}
 			
-			pm.mx2.ROS2o <- if(jnmx2.inside() == FALSE) {
-				pm[,pm.cn() >= jnmx2.2] 
-			}
-			if(!is.na(jnmx2.1) & !is.na(jnmx2.2)) {
-				mx2.pad <- matrix(nrow = pm.nrow, ncol = pm.ncol - ncol(pm.mx2.ROS1o) - ncol(pm.mx2.ROS2o))
-				pm.mx2.wROS <- cbind(pm.mx2.ROS1o, mx2.pad, pm.mx2.ROS2o)
-			} else {
-				if (!is.na(jnmx2.1) & is.na(jnmx2.2)) {
-					mx2.pad <- matrix(nrow = pm.nrow, ncol = pm.ncol - ncol(pm.mx2.ROS1o))
-					pm.mx2.wROS <- cbind(pm.mx2.ROS1o, mx2.pad)
-				} else {
-					if (is.na(jnmx2.1) & !is.na(jnmx2.2)) {
-						mx2.pad <- matrix(nrow = pm.nrow, ncol = pm.ncol - ncol(pm.mx2.ROS2o))
-						pm.mx2.wROS <- cbind(mx2.pad, pm.mx2.ROS2o)
-					}
+			# ROS inside JN bounds
+			if(jnmx2.inside() == TRUE) {
+				# inside both j-n values (center band) (not run, program does not accept squared terms)
+				if(!is.na(jnmx2.1) & !is.na(jnmx2.2)) {
+					pm.mx2.ROS1i <- pm[,vecx2 >= jnmx2.1 & vecx2 <= jnmx2.2]
+					mx2.pad1 <- matrix(nrow = nrow(pm), ncol = jnmx2.1cn()) # lower pad made of NAs
+					mx2.pad2 <- matrix(nrow = nrow(pm), ncol = ncol(pm)- jnmx2.2cn()) # upper pad  made of NAs
+					pm.mx2.wROS <- cbind(mx2.pad1, pm.mx2.ROS1i, mx2.pad2)
+				}
+				# lower JN bound within range (high band)
+				if(!is.na(jnmx2.1) & is.na(jnmx2.2)) {
+					pm.mx2.ROS1i <- pm[,vecx2 >= jnmx2.1]  # ROS covers first JN bound through maximum 
+					mx2.pad <- matrix(nrow = nrow(pm), ncol = ncol(pm) - ncol(pm.mx2.ROS1i))
+					pm.mx2.wROS <- cbind(mx2.pad, pm.mx2.ROS1i)
+				}
+				# upper JN bound within range (low band)
+				if(!is.na(jnmx2.2) & is.na(jnmx2.1)) {
+					pm.mx2.ROS2i <-	pm[,vecx2 <= jnmx2.2] # ROS covers minimum through second JN bound
+					mx2.pad <- matrix(nrow = nrow(pm), ncol = ncol(pm) - ncol(pm.mx2.ROS2i))
+					pm.mx2.wROS <- cbind(pm.mx2.ROS2i, mx2.pad)
 				}
 			}
-			rownames(pm.mx2.wROS) <- vecx1()
-			colnames(pm.mx2.wROS) <- vecx2()
+			
+			# ROS outside JN bounds
+			if(jnmx2.inside() == FALSE) {
+				
+				# first JN bound within range (low band)
+				if(!is.na(jnmx2.1)) { 
+					pm.mx2.ROS1o <- pm[,vecx2 <= jnmx2.1] # ROS covers minimum through first JN bound
+				}
+				# second JN bound within range (high band)
+				if(!is.na(jnmx2.2)) { 
+					pm.mx2.ROS2o <- pm[,vecx2 >= jnmx2.2] # ROS covers JN bound through maximum
+				}
+				
+				# combining with pads
+				# both within range (low and high)
+				if(!is.na(jnmx2.1) & !is.na(jnmx2.2)) { 
+					mx2.pad <- matrix(nrow = nrow(pm), ncol = ncol(pm) - ncol(pm.mx2.ROS1o) - ncol(pm.mx2.ROS2o))
+					pm.mx2.wROS <- cbind(pm.mx2.ROS1o, mx2.pad, pm.mx2.ROS2o)
+				} 
+				# first within range only (low band only)
+				if (!is.na(jnmx2.1) & is.na(jnmx2.2)) { 
+					mx2.pad <- matrix(nrow = nrow(pm), ncol = ncol(pm) - ncol(pm.mx2.ROS1o))
+					pm.mx2.wROS <- cbind(pm.mx2.ROS1o, mx2.pad)
+				}
+				# second within range only (high band only)
+				if (is.na(jnmx2.1) & !is.na(jnmx2.2)) { 
+					mx2.pad <- matrix(nrow = nrow(pm), ncol = ncol(pm) - ncol(pm.mx2.ROS2o))
+					pm.mx2.wROS <- cbind(mx2.pad, pm.mx2.ROS2o)
+				}
+			}
+			
+			# add vector values to row and column names of matrix
+			rownames(pm.mx2.wROS) <- vecx1
+			colnames(pm.mx2.wROS) <- vecx2
 			pm.mx2.wROS
-		} else { 
+		} else {
 			NULL
 		}
 	})
 	
-	# 3D scatter plot ---------------------------------------------------------
+	
+	# set reactive values for plot features for continuity  --------
+	checkboxes <- reactiveValues(scatterCB = TRUE, regplaneCB = TRUE,
+		predCICB = FALSE, pm.mx1.wROSCB = "none", pm.mx2.wROSCB = "none", 
+		jn.gradient.mx1CB = FALSE, jn.gradient.mx2CB = FALSE,
+		coonx1CB = FALSE, coonx2 = FALSE)
+	
+	# scatter
+	observeEvent(input$scatterCheckbox, {
+		if(input$scatterCheckbox == TRUE) {
+			checkboxes$scatterCB <- TRUE
+		}
+		if(input$scatterCheckbox == FALSE) {
+			checkboxes$scatterCB <- FALSE
+		}
+	})
+	
+	# reg plane
+	observeEvent(input$regplaneCheckbox, {
+		if(input$regplaneCheckbox == TRUE) {
+			checkboxes$regplaneCB <- TRUE
+		}
+		if(input$regplaneCheckbox == FALSE) {
+			checkboxes$regplaneCB <- FALSE
+		}
+	})
+	
+	# pred CI
+	observeEvent(input$predCICheckbox, {
+		if(input$predCICheckbox == TRUE) {
+			checkboxes$predCICB <- TRUE
+		}
+		if(input$predCICheckbox == FALSE) {
+			checkboxes$predCICB <- FALSE
+		}
+	})
+	
+	# ROS mod x1
+	observeEvent(input$pm.mx1.wROSCheckbox, {
+		if(input$pm.mx1.wROSCheckbox == "gradient") {
+			checkboxes$pm.mx1.wROSCB <- "gradient"
+		}
+		if(input$pm.mx1.wROSCheckbox == "none") {
+			checkboxes$pm.mx1.wROSCB <- "none"
+		}
+		if(input$pm.mx1.wROSCheckbox == "solid") {
+			checkboxes$pm.mx1.wROSCB <- "solid"
+		}
+	})
+	
+	# ROS mod x2
+	observeEvent(input$pm.mx2.wROSCheckbox, {
+		if(input$pm.mx2.wROSCheckbox == "gradient") {
+			checkboxes$pm.mx2.wROSCB <- "gradient"
+		}
+		if(input$pm.mx2.wROSCheckbox == "none") {
+			checkboxes$pm.mx2.wROSCB <- "none"
+		}
+		if(input$pm.mx2.wROSCheckbox == "solid") {
+			checkboxes$pm.mx2.wROSCB <- "solid"
+		}
+	})
+	
+	# crossover on x1 
+	observeEvent(input$coonx1Checkbox, {
+		if(input$coonx1Checkbox == TRUE) {
+			checkboxes$coonx1CB <- TRUE
+		}
+		if(input$coonx1Checkbox == FALSE) {
+			checkboxes$coonx1CB <- FALSE
+		}
+	})	
+	
+	# crossover on x2 
+	observeEvent(input$coonx2Checkbox, {
+		if(input$coonx2Checkbox == TRUE) {
+			checkboxes$coonx2CB <- TRUE
+		}
+		if(input$coonx2Checkbox == FALSE) {
+			checkboxes$coonx2CB <- FALSE
+		}
+	})	
+	
+	
+	# create 3D plot ---------------------------------------------------------
 	plot3d <- reactive({
-		req(input$x1 != "--", input$x2 != "--",input$y != "--")
+		req(input$x1 != "--", input$x2 != "--",input$y != "--", sameVar() == FALSE, non.numeric() == FALSE)
+		
 		data <- df.std()
 		pmcolor <- array(1L, dim(pm())) # matrix for regression plane color
 		
@@ -1574,14 +1850,14 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 				scene = list(
 					camera = list(eye = list(x = 1.6, y = -1.6, z = 1.25)),
 					xaxis = list(title = input$x1,
-						titlefont = list(family = "Arial, sans-serif", color = "#3366ff", size = 16),
-						tickfont = list(family = "Arial, sans-serif", size = 12)),
+						titlefont = list(family = "Arial, sans-serif", color = "#3366ff", size = 10),
+						tickfont = list(family = "Arial, sans-serif", size = 10)),
 					yaxis = list(title = input$x2,
-						titlefont = list(family = "Arial, sans-serif", color = "#567001", size = 16),
-						tickfont = list(family = "Arial, sans-serif", size = 12)),
+						titlefont = list(family = "Arial, sans-serif", color = "#567001", size = 10),
+						tickfont = list(family = "Arial, sans-serif", size = 10)),
 					zaxis = list(title = input$y,
-						titlefont = list(family = "Arial, sans-serif", color = "#484747", size = 16),
-						tickfont = list(family = "Arial, sans-serif",	size = 12)))) %>%
+						titlefont = list(family = "Arial, sans-serif", color = "#484747", size = 10),
+						tickfont = list(family = "Arial, sans-serif",	size = 10)))) %>%
 			hide_legend()
 		
 		# add regression plane if checked
@@ -1622,65 +1898,55 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 			NULL
 		}
 		
-		# ROS for x1 as mod
-		if ((!is.na(jnmx1.1()) | !is.na(jnmx1.2())) & intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox)) {
-			if(input$pm.mx1.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx1Checkbox)) {
-					if(input$jn.gradient.mx1Checkbox == TRUE) {
-						jnmx1cb <- jnmx1cb()
-						jnmx1cb <- jnmx1cb[pm.rn() <= jnmx1.1() | pm.rn() >= jnmx1.2(),]
-						jnmx1cb <- jnmx1cb[!is.na(jnmx1cb[,1]),]
-						jnmx1cbd <- (jnmx1cb[,4] - jnmx1cb[,2])*2 # upper CI minus slope times 2
-						pm.mx1.wROSg <- pm.mx1.wROS()
-						pm.mx1.wROSg[!is.na(pm.mx1.wROSg)] <- jnmx1cbd
-						shscmx1 <- TRUE
-					} else {
-						pm.mx1.wROSg <- pm.mx1.wROS()
-						pm.mx1.wROSg[!is.na(pm.mx1.wROSg)] <- 1
-					}
-				} else {
-					pm.mx1.wROSg <- pm.mx1.wROS()
-					pm.mx1.wROSg[!is.na(pm.mx1.wROSg)] <- 1
-				}
-				
-				p <- add_surface(p, x = ~vecx1(), y = ~vecx2(), z = ~t(pm.mx1.wROS()),
-					type = "surface",
-					surfacecolor=t(pm.mx1.wROSg),
-					colorscale = list(c(0, 1), c("#567001", 'white')),
-					opacity = 0.6,
-					showscale = FALSE)
-			} 
-		} else {
-			NULL
-		}
-		
 		# ROS for x2 as mod
-		if ((!is.na(jnmx2.1()) | !is.na(jnmx2.2())) & intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox)) {
-			if (input$pm.mx2.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx2Checkbox)) {
-					# set gradient of ROS
-					if(input$jn.gradient.mx2Checkbox == TRUE) {
-						jnmx2cb <- jnmx2cb()
-						jnmx2cb <- jnmx2cb[pm.cn() <= jnmx2.1() | pm.cn() >= jnmx2.2(),]
-						jnmx2cb <- jnmx2cb[!is.na(jnmx2cb[,1]),]
-						jnmx2cbd <- (jnmx2cb[,4] - jnmx2cb[,2])*2 # upper CI minus slope times 2
-						pm.mx2.wROSg <- t(pm.mx2.wROS())
-						pm.mx2.wROSg[!is.na(pm.mx2.wROSg)] <- jnmx2cbd
-						pm.mx2.wROSg <- t(pm.mx2.wROSg)
-					} else {
-						pm.mx2.wROSg <- pm.mx2.wROS()
-						pm.mx2.wROSg[!is.na(pm.mx2.wROSg)] <- 1
-					}
-				} else {
-					pm.mx2.wROSg <- pm.mx2.wROS()
-					pm.mx2.wROSg[!is.na(pm.mx2.wROSg)] <- 1
-				}
-				# ROS for x2 as mod
+		if (mx2.ROS.none() == FALSE & intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox)) {
+			if (input$pm.mx2.wROSCheckbox == "gradient") {
+				pm.mx2.wROSg <- t(pm.mx2.wROS())
+				pm.mx2.wROSg[!is.na(pm.mx2.wROSg)] <- jnmx2cbd()
+				pm.mx2.wROSg <- t(pm.mx2.wROSg)
 				p <- add_surface(p, x = ~vecx1(), y = ~vecx2(), z = ~t(pm.mx2.wROS()),
 					type = "surface",
 					surfacecolor=t(pm.mx2.wROSg),
 					colorscale = list(c(0, 1), c("#3366ff", 'white')),
-					opacity = 0.6,
+					opacity = 0.7,
+					showscale = FALSE)
+			}
+			if(input$pm.mx2.wROSCheckbox == "solid") {
+				pm.mx2.wROSg <- pm.mx2.wROS()
+				pm.mx2.wROSg[!is.na(pm.mx2.wROSg)] <- 1
+				p <- add_surface(p, x = ~vecx1(), y = ~vecx2(), z = ~t(pm.mx2.wROS()),
+					type = "surface",
+					surfacecolor=t(pm.mx2.wROSg),
+					colorscale = list(c(0, 1), c("#3366ff", 'white')),
+					opacity = 0.7,
+					showscale = FALSE)
+			}
+		} else {
+			NULL
+		}
+		
+		
+		
+		# ROS for x1 as mod
+		if (mx1.ROS.none() == FALSE & intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox)) {
+			if(input$pm.mx1.wROSCheckbox == "gradient") {
+				pm.mx1.wROSg <- pm.mx1.wROS()
+				pm.mx1.wROSg[!is.na(pm.mx1.wROSg)] <- jnmx1cbd()
+				p <- add_surface(p, x = ~vecx1(), y = ~vecx2(), z = ~t(pm.mx1.wROS()),
+					type = "surface",
+					surfacecolor=t(pm.mx1.wROSg),
+					colorscale = list(c(0, 1), c("#567001", 'white')),
+					opacity = 0.7,
+					showscale = FALSE)
+			}
+			if(input$pm.mx1.wROSCheckbox == "solid") {
+				pm.mx1.wROSg <- pm.mx1.wROS()
+				pm.mx1.wROSg[!is.na(pm.mx1.wROSg)] <- 1
+				p <- add_surface(p, x = ~vecx1(), y = ~vecx2(), z = ~t(pm.mx1.wROS()),
+					type = "surface",
+					surfacecolor=t(pm.mx1.wROSg),
+					colorscale = list(c(0, 1), c("#567001", 'white')),
+					opacity = 0.7,
 					showscale = FALSE)
 			}
 		} else {
@@ -1695,7 +1961,7 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 					type = "scatter3d",
 					mode = "lines",
 					line = list(width = 3, dash = "solid", color = "#567001"),
-					opacity = 0.7)
+					opacity = 0.8)
 			}
 		} else {
 			NULL
@@ -1718,38 +1984,43 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	
 	
 	# scale for cb gradient ---------------------------------------------------
-	# for x1 as mod
+	# for x1 as mod	
 	jnmx1cbd <- reactive({	
-		if(intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox)) {
-			if(input$pm.mx1.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx1Checkbox)) {
-					if(input$jn.gradient.mx1Checkbox == TRUE) {
-						jnmx1cb <- jnmx1cb()
-						jnmx1cb <- jnmx1cb[pm.rn() <= jnmx1.1() | pm.rn() >= jnmx1.2(),]
-						jnmx1cb <- jnmx1cb[!is.na(jnmx1cb[,1]),]
-						jnmx1cbd <- (jnmx1cb[,4] - jnmx1cb[,2])*2
-						jnmx1cbd <- seq(jnmx1cbd[1], jnmx1cbd[length(jnmx1cbd)], length.out = 10)
-						jnmx1cbd <- sort(jnmx1cbd, decreasing = FALSE)
-						jnmx1cbd <- format(round(jnmx1cbd, digits = 2), nsmall = 2)
-						jnmx1cbd
+		if(intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox) & mx1.ROS.none() == FALSE) {
+			if(input$pm.mx1.wROSCheckbox == "gradient") {
+				jnmx1cb <- jnmx1cb()
+				if(mx1.ROS.all() == TRUE) {
+					jnmx1cb <- jnmx1cb[!is.na(jnmx1cb[,1]),]
+				} else {
+					if(jnmx1.inside() == FALSE) {
+						jnmx1cb <- jnmx1cb[vecx1() <= jnmx1.1() | vecx1() >= jnmx1.2(),]
 					}
+					if(jnmx1.inside() == TRUE) {
+						jnmx1cb <- jnmx1cb[vecx1() >= jnmx1.1() | vecx1() <= jnmx1.2(),]
+					}
+					jnmx1cb <- jnmx1cb[!is.na(jnmx1cb[,1]),]
 				}
+				jnmx1cbd <- (jnmx1cb[,4] - jnmx1cb[,3]) # upper CI minus lower CI
 			}
 		} else {
 			NULL
 		}
 	})
 	
+	jnmx1cbd.print <- reactive({	
+		jnmx1cbd <- seq(jnmx1cbd()[1], jnmx1cbd()[length(jnmx1cbd())], length.out = 10)
+		jnmx1cbd <- sort(jnmx1cbd, decreasing = FALSE)
+		jnmx1cbd <- format(round(jnmx1cbd, digits = 3), nsmall = 3)
+		jnmx1cbd
+	})
+	
 	output$mx1cbscale <- renderUI({
-		if(intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox)) {
-			if(input$pm.mx1.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx1Checkbox)) {
-					if(input$jn.gradient.mx1Checkbox == TRUE) {
-						HTML("<div style='background-image: linear-gradient(to right, #567001, white);  
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox) & mx1.ROS.none() == FALSE) {
+			if(input$pm.mx1.wROSCheckbox == "gradient") {
+				HTML("<div style='background-image: linear-gradient(to right, #567001, white);  
 							border-width: 1px; border-style: solid; border-color:gray;
 							height: 20px;   text-align: justify' </div>")
-					}
-				}
 			}
 		} else {
 			NULL
@@ -1758,13 +2029,10 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	
 	
 	output$mx1cbscale.title <- renderUI({
-		if(intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox)) {
-			if(input$pm.mx1.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx1Checkbox)) {
-					if(input$jn.gradient.mx1Checkbox == TRUE) {
-						HTML("<div style='height: 20px;   text-align: center' >", paste0("Width of 95% CB around ", input$x2, " Slope"), "</div>")
-					}
-				}
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox) & mx1.ROS.none() == FALSE) {
+			if(input$pm.mx1.wROSCheckbox == "gradient") {
+				HTML("<div style='height: 20px;   text-align: center' >", paste0("Width of 95% CB around ", input$x2, " Slope"), "</div>")
 			}
 		} else {
 			NULL
@@ -1772,26 +2040,21 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	})
 	
 	output$mx1cbscale.text1 <- renderUI({
-		if(intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox)) {
-			if(input$pm.mx1.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx1Checkbox)) {
-					if(input$jn.gradient.mx1Checkbox == TRUE) {
-						HTML("<div style='height: 20px;   text-align: left' >",  paste0("Min: ", min(jnmx1cbd())), "</div>")
-					}
-				}
-			} 
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox) & mx1.ROS.none() == FALSE) {
+			if(input$pm.mx1.wROSCheckbox == "gradient") {
+				HTML("<div style='height: 20px;   text-align: left' >",  paste0("Min: ", min(jnmx1cbd.print())), "</div>")
+			}
 		} else {
 			NULL
 		}
 	})
+	
 	output$mx1cbscale.text2 <- renderUI({
-		if(intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox)) {
-			if(input$pm.mx1.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx1Checkbox)) {
-					if(input$jn.gradient.mx1Checkbox == TRUE) {
-						HTML("<div style='height: 20px;   text-align: right' >",  paste0("Max: ", max(jnmx1cbd())), "</div>") 
-					}
-				}
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & !is.null(input$pm.mx1.wROSCheckbox) & mx1.ROS.none() == FALSE) {
+			if(input$pm.mx1.wROSCheckbox == "gradient") {
+				HTML("<div style='height: 20px;   text-align: right' >",  paste0("Max: ", max(jnmx1cbd.print())), "</div>") 
 			}
 		} else {
 			NULL
@@ -1800,51 +2063,52 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	
 	# for x2 as mod
 	jnmx2cbd <- reactive({	
-		if(intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox)) {
-			if(input$pm.mx2.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx2Checkbox)) {
-					if(input$jn.gradient.mx2Checkbox == TRUE) {
-						jnmx2cb <- jnmx2cb()
-						jnmx2cb <- jnmx2cb[pm.cn() <= jnmx2.1() | pm.cn() >= jnmx2.2(),]
-						jnmx2cb <- jnmx2cb[!is.na(jnmx2cb[,1]),]
-						jnmx2cbd <- (jnmx2cb[,4] - jnmx2cb[,2])*2
-						jnmx2cbd <- seq(jnmx2cbd[1], jnmx2cbd[length(jnmx2cbd)], length.out = 10)
-						jnmx2cbd <- sort(jnmx2cbd, decreasing = FALSE)
-						jnmx2cbd <- format(round(jnmx2cbd, digits = 2), nsmall = 2)
-						jnmx2cbd
+		if(intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox) & mx2.ROS.none() == FALSE) {
+			if(input$pm.mx2.wROSCheckbox == "gradient") {
+				jnmx2cb <- jnmx2cb()
+				if(mx2.ROS.all() == TRUE) {
+					jnmx2cb <- jnmx2cb[!is.na(jnmx2cb[,1]),]
+				} else {
+					if(jnmx2.inside() == FALSE) {
+						jnmx2cb <- jnmx2cb[vecx2() <= jnmx2.1() | vecx2() >= jnmx2.2(),]
+					} 
+					if (jnmx2.inside() == TRUE) {
+						jnmx2cb <- jnmx2cb[vecx2() >= jnmx2.1() | vecx2() <= jnmx2.2(),]
 					}
+					jnmx2cb <- jnmx2cb[!is.na(jnmx2cb[,1]),]
 				}
+				jnmx2cbd <- (jnmx2cb[,4] - jnmx2cb[,3]) # upper CI minus lower CI
 			}
 		} else {
 			NULL
 		}
+	})
+	
+	jnmx2cbd.print <- reactive({	
+		jnmx2cbd <- seq(jnmx2cbd()[1], jnmx2cbd()[length(jnmx2cbd())], length.out = 10)
+		jnmx2cbd <- sort(jnmx2cbd, decreasing = FALSE)
+		jnmx2cbd <- format(round(jnmx2cbd, digits = 3), nsmall = 3)
+		jnmx2cbd
 	})
 	
 	output$mx2cbscale <- renderUI({
-		if(intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox)) {
-			if(input$pm.mx2.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx2Checkbox)) {
-					if(input$jn.gradient.mx2Checkbox == TRUE) {
-						HTML("<div style='background-image: linear-gradient(to right, #3366ff, white);  
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox) & mx2.ROS.none() == FALSE) {
+			if(input$pm.mx2.wROSCheckbox == "gradient") {
+				HTML("<div style='background-image: linear-gradient(to right, #3366ff, white);  
 							border-width: 1px; border-style: solid; border-color:gray;
 							height: 20px;   text-align: justify' </div>")
-					}
-				}
 			}
 		} else {
 			NULL
 		}
 	})
 	
-	
 	output$mx2cbscale.title <- renderUI({
-		if(intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox)) {
-			if(input$pm.mx2.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx2Checkbox)) {
-					if(input$jn.gradient.mx2Checkbox == TRUE) {
-						HTML("<div style='height: 20px;   text-align: center' >", paste0("Width of 95% CB around ", input$x1, " Slope"), "</div>")
-					}
-				}
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox) & mx2.ROS.none() == FALSE) {
+			if(input$pm.mx2.wROSCheckbox == "gradient") {
+				HTML("<div style='height: 20px;   text-align: center' >", paste0("Width of 95% CB around ", input$x1, " Slope"), "</div>")
 			}
 		} else {
 			NULL
@@ -1852,26 +2116,20 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	})
 	
 	output$mx2cbscale.text1 <- renderUI({
-		if(intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox)) {
-			if(input$pm.mx2.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx2Checkbox)) {
-					if(input$jn.gradient.mx2Checkbox == TRUE) {
-						HTML("<div style='height: 20px;   text-align: left' >",  paste0("Min: ", min(jnmx2cbd())), "</div>")
-					}
-				}
-			} 
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox) & mx2.ROS.none() == FALSE) {
+			if(input$pm.mx2.wROSCheckbox == "gradient") {
+				HTML("<div style='height: 20px;   text-align: left' >",  paste0("Min: ", min(jnmx2cbd.print())), "</div>")
+			}
 		} else {
 			NULL
 		}
 	})
 	output$mx2cbscale.text2 <- renderUI({
-		if(intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox)) {
-			if(input$pm.mx2.wROSCheckbox == TRUE) {
-				if(!is.null(input$jn.gradient.mx2Checkbox)) {
-					if(input$jn.gradient.mx2Checkbox == TRUE) {
-						HTML("<div style='height: 20px;   text-align: right' >",  paste0("Max: ", max(jnmx2cbd())), "</div>") 
-					}
-				}
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == TRUE & !is.null(input$pm.mx2.wROSCheckbox) & mx2.ROS.none() == FALSE) {
+			if(input$pm.mx2.wROSCheckbox == "gradient") {
+				HTML("<div style='height: 20px;   text-align: right' >",  paste0("Max: ", max(jnmx2cbd.print())), "</div>") 
 			}
 		} else {
 			NULL
@@ -1879,89 +2137,71 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	})
 	
 	
-	# render UI for plot features -------------------------------------
+	# render plot and UI for plot features -------------------------------------
+	output$plot3dPlot <- renderPlotly({
+		req(non.numeric() == FALSE, sameVar() == FALSE)
+		plot3d()
+	})
+	
 	output$plotfeatTitle <- renderText({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
-			(input$x1 != input$y), (input$x2 != input$y))
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
 		HTML(paste0("<div style='font-weight: 700' >Plot Features</div>"))
 	})
 	
 	output$scatterUI <- renderUI({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
-			(input$x1 != input$y), (input$x2 != input$y))
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
 		checkboxInput(inputId = "scatterCheckbox",
 			label = "Scatterplot",
-			value = TRUE)
+			value = checkboxes$scatterCB)
 	})
 	output$regplaneUI <- renderUI({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
-			(input$x1 != input$y), (input$x2 != input$y))
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
 		checkboxInput(inputId = "regplaneCheckbox",
 			label = "Regression plane",
-			value = TRUE)
-	})
+			value = checkboxes$regplaneCB)
+	}) 
 	output$predCIUI <- renderUI({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
-			(input$x1 != input$y), (input$x2 != input$y))
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
 		checkboxInput(inputId = "predCICheckbox", 
-			label = "95% CI")
+			label = "95% CI",
+			value = checkboxes$predCICB)
 	})
 	output$pm.mx1.wROSUI <- renderUI({
-		if ((!is.na(jnmx1.1()) | !is.na(jnmx1.2())) & intsig() == TRUE) {
-			checkboxInput(inputId = "pm.mx1.wROSCheckbox", 
-				label = "ROS")
+		if ((mx1.ROS.none() == FALSE) & intsig() == TRUE & non.numeric() == FALSE) {
+			radioButtons(inputId = "pm.mx1.wROSCheckbox",
+				label = NULL,
+				choices = c("No ROS" = "none", "Solid ROS" = "solid", "Gradient ROS (Slope 95% CB)" = "gradient"),
+				selected = checkboxes$pm.mx1.wROSCB, inline = FALSE)
 		}
 	})
-	
-	output$jn.gradient.mx1UI <- renderUI({
-		req(input$pm.mx1.wROSCheckbox)
-		if ((!is.na(jnmx1.1()) | !is.na(jnmx1.2())) & intsig() == TRUE) {
-			if(input$pm.mx1.wROSCheckbox == TRUE) {
-				checkboxInput(inputId = "jn.gradient.mx1Checkbox",
-					label = paste0("Slope 95% CB"))
-			}
-		} else {
-			NULL
-		}
-	})
-	
 	output$pm.mx2.wROSUI <- renderUI({
-		if ((!is.na(jnmx2.1()) | !is.na(jnmx2.2())) & intsig() == TRUE) {
-			checkboxInput(inputId = "pm.mx2.wROSCheckbox", 
-				label = "ROS")
-		}
-	})
-	
-	output$jn.gradient.mx2UI <- renderUI({
-		req(input$pm.mx2.wROSCheckbox)
-		if ((!is.na(jnmx2.1()) | !is.na(jnmx2.2())) & intsig() == TRUE) {
-			if (input$pm.mx2.wROSCheckbox == TRUE) {
-				checkboxInput(inputId = "jn.gradient.mx2Checkbox", 
-					label = paste0("Slope 95% CB"))
-			}
-		} else {
-			NULL
+		if ((mx2.ROS.none() == FALSE) & intsig() == TRUE & non.numeric() == FALSE) {
+			radioButtons(inputId = "pm.mx2.wROSCheckbox",
+				label = NULL,
+				choices = c("No ROS" = "none", "Solid ROS" = "solid", "Gradient ROS (Slope 95% CB)" = "gradient"),
+				selected = checkboxes$pm.mx2.wROSCB, inline = FALSE)
 		}
 	})
 	
 	output$coonx1UI <- renderUI({
-		if (!is.na(coonx1()) & intsig() == TRUE) {
+		if (!is.na(coonx1()) & non.numeric() == FALSE & sameVar() == FALSE) {
 			checkboxInput(inputId = "coonx1Checkbox", 
-				label = "Crossover")
-		}
+				label = "Crossover",
+				value = checkboxes$coonx1CB)
+		} 
 	})
 	
 	output$coonx2UI <- renderUI({
-		if (!is.na(coonx2()) & intsig() == TRUE) {
+		if (!is.na(coonx2()) & non.numeric() == FALSE & sameVar() == FALSE) {
 			checkboxInput(inputId = "coonx2Checkbox", 
-				label = "Crossover")
-		}
+				label = "Crossover",
+				value = checkboxes$coonx2CB)
+		} 
 	})
 	
 	output$mx1CheckboxTitle <- renderText({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
-			(input$x1 != input$y), (input$x2 != input$y))
-		if(intsig() == TRUE & (!is.na(jnmx1.1()) | !is.na(jnmx1.2()) | !is.na(coonx1()))) {
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
+		if((intsig() == TRUE & mx1.ROS.none() == FALSE) | !is.na(coonx1())) {
 			HTML(paste0("<div style='font-weight: 700' >", input$x1, " as Moderator </div>")) 
 		} else {
 			NULL
@@ -1969,62 +2209,67 @@ Once you have clicked on zoom, pan, or rotate, click on the plot and hold while 
 	})
 	
 	output$mx2CheckboxTitle <- renderText({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--')
-		if(intsig() == TRUE & (!is.na(jnmx2.1()) | !is.na(jnmx2.2()) | !is.na(coonx2()))) {
+		req(input$x1 != '--', input$x2 != '--', input$y != '--', sameVar() == FALSE, non.numeric() == FALSE)
+		if((intsig() == TRUE & mx2.ROS.none() == FALSE) | !is.na(coonx2())) {
 			HTML(paste0("<div style='font-weight: 700' >", input$x2, " as Moderator </div>")) 
 		} else {
 			NULL
 		}
 	})
 	
-	# render warning for sidebar if interaction is not significant ------------
-	output$intWarning <- renderText({
-		if(input$x1 != "--" & input$x2 != "--" & input$y != "--" & intsig() == FALSE) {
+	# render warnings/messages for sidebar ------------
+	output$messageSameVar <- renderText({
+		req(input$x1 != "--", input$x2 != "--", input$y != "--")
+		if(sameVar() == TRUE) {
 			HTML(paste0("<div style='background-color: #ff9999; border-radius: 5px;
-			text-align: center; border-width: 1px; border-style: solid; border-color:#808080;
-				font-size: 12px; font-color: #808080; padding:10px;' >", 
-				paste0("The interaction between ", input$x1, " and ", input$x2, " does not significantly predict ",
-					input$y, ". To view all 3D plot features and the Johnson-Neyman test results, enter a model with a significant ",
-					"interaction term."), "</div>"))
-		}
+				text-align: center; border-width: 1px; border-style: solid; border-color: #808080; padding:5px;
+				font-size: 10px; font-color: #808080'> Check your model. The same variable was input twice. </div>"))
+		} 
 	})
 	
-	# render warning for sidebar if variable put in twice ------------
-	output$sameVarWarning <- renderText({
+	output$messageNonNum <- renderText({
 		req(input$x1 != "--", input$x2 != "--", input$y != "--")
-		if(input$x1 == input$x2 | input$x1 == input$y | input$x2 == input$y) {
+		if(non.numeric() == TRUE) {
 			HTML(paste0("<div style='background-color: #ff9999; border-radius: 5px;
 			text-align: center; border-width: 1px; border-style: solid; border-color: #808080; padding:5px;
-				font-size: 12px; font-color: #808080'> Check your model. The same variable was input twice. </div>"))
+			font-size: 12px; font-color: #808080'> Check your variables. At least one seems to be non-numeric. If
+		  they are all numeric, it may be that one variable has only a few integer values or (if using an SPSS file) has value labels and is being read as a factor. Try 
+			using a different file type and/or removing the value labels. </div>"))
+		} 
+	})
+	
+	output$messageInt <- renderText({
+		req(input$x1 != "--", input$x2 != "--", input$y != "--", non.numeric() == FALSE, sameVar() == FALSE)
+		if(intsig() == FALSE) {
+			HTML(paste0("<div style='background-color: #ff9999; border-radius: 5px;
+					text-align: center; border-width: 1px; border-style: solid; border-color:#808080;
+					font-size: 10px; font-color: #808080; padding:10px;' >", 
+				paste0("The interaction between ", input$x1, " and ", input$x2, " does not significantly predict ",
+					input$y, ". To view all 3D plot features and the Johnson-Neyman test results, enter a model with a significant ",
+					"interaction term. You can still see the regression plane and scatterplot on the <b> Main Output </b> tab."), "</div>"))
+		} else {
+			HTML(paste0("<div style='background-color: #d9d9d9; border-radius: 5px;
+					text-align: center; border-width: 1px; border-style: solid; border-color: #808080; padding:8px;
+					font-size: 10px; font-color: #808080'> Click the <b> Main Output </b> tab to see the 3D plot and output for your model. Scroll down to see all plot features. </div>"))
 		}
 	})
 	
-	# render message to click 3d plot tab ------------
-	output$click3D <- renderText({
-		req(input$x1 != '--', input$x2 != '--', input$y != '--', (input$x1 != input$x2),
-			(input$x1 != input$y), (input$x2 != input$y)) 
-			HTML(paste0("<div style='background-color: #BFD3F0; border-radius: 5px;
-			text-align: center; border-width: 1px; border-style: solid; border-color: #808080; padding:8px;
-				font-size: 12px; font-color: #808080'> Click the <b> 3D Plot </b> tab to see the output for your model. </div>"))
-	})
-	
-
-# code for making live figures --------------------------------------------
+	# code for making live figures --------------------------------------------
 	output$codetitle1 <- renderUI({
 		HTML(paste(
 			"<div style='font-size: 13px'> 
-			<h4> Function Code </h4> 
-			Click <a href=“https://github.com/mfinsaas/jnthreedimint/blob/master/FunctionCode_LivePlot.R”>here</a> to access the function code for producing a live plot. You must first run the function code
-			in your R session, then run the input code below.
-			<h4> Input Code </h4>
-			Click <a href=“https://github.com/mfinsaas/jnthreedimint/blob/master/InputCode_LifePlot.R”>here</a>
-			to access the input code. You will need to update the arguments before running
-			it in the RStudio console. Once you've run it, the plot will appear in the RStudio Viewer.
-			A copy will also be saved locally to your computer.
-			To publish the plot online, click the blue Publish button in the Viewer window and follow the steps to make 
-			a free RPubs account."))
-		})
-
+			<h4> R Code for Making 3D Figures </h4>
+					To create a “live” rotatable plot with a permanent link like <a href=http://rpubs.com/sbu_mfinsaas/Figure8 target=_blank> this one</a>:
+						<ol> 
+							<li> Download <a href=https://www.r-project.org target=_blank>R</a> and <a href=https://www.rstudio.com target=_blank>RStudio</a>, which are both free programs. </li>
+							<li> Click <a href=https://github.com/mfinsaas/jnthreedimint/blob/master/1-FunctionCode_LivePlot.R target=_blank>here</a> to access the function code for producing a live plot and run it in RStudio. Any time you start a new R session you will need to re-run this code before running the input code (or you can save and source this file). </li>
+							<li> Click <a href=https://github.com/mfinsaas/jnthreedimint/blob/master/2-InputCode_LivePlot.R target=_blank>here</a>
+			to access the input code. Then update the arguments and run it in RStudio. The plot will appear in the RStudio Viewer and a copy will also be saved locally to your computer. </li>
+							<li> Click the blue “Publish” icon in the RStudio viewer and follow the steps to publish to the free service <a href=http://rpubs.com target=_blank>Rpubs</a>. The permanent Rpubs link can then be emailed to colleagues, included in papers, etc.</li>
+						</ol>
+							This approach works because RStudio supports online publication directly from its viewer window, whereas this action is not supported directly from Shiny apps. If you have trouble with it, please email me at megan.finsaas@gmail.com."))
+	})
+	
 }
 
 shinyApp(ui, server)
