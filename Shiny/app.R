@@ -639,7 +639,7 @@ server <- function(input, output, session) {
 			"<div style='font-size: 12px'> 
 			<h5> Welcome </h5>
 					This visualization tool represents continuous by continuous interactions as a regression plane in 
-					3D space in combination with the regions of significance from the Johnon-Neyman technique. You can see an example of the type of plot produced <a href=http://rpubs.com/sbu_mfinsaas/Figure8 target=_blank> here</a>. 
+					3D space in combination with the regions of significance from the Johnon-Neyman technique. You can see an example of the type of plot produced <a href=http://rpubs.com/sbu_mfinsaas/Example target=_blank> here</a>. 
 					Please contact Megan Finsaas at megan.finsaas@gmail.com if you have questions or comments about the app. <br> <br>
 					For the best performance, please run the app in <b> Google Chrome</b>. 
 			<h5> Uploading a Datafile </h5>
@@ -2259,7 +2259,7 @@ server <- function(input, output, session) {
 		HTML(paste(
 			"<div style='font-size: 13px'> 
 			<h4> R Code for Making 3D Figures </h4>
-					To create a “live” rotatable plot with a permanent link like <a href=http://rpubs.com/sbu_mfinsaas/Figure8 target=_blank> this one</a>:
+					To create a “live” rotatable plot with a permanent link like <a href=http://rpubs.com/sbu_mfinsaas/Example target=_blank> this one</a>:
 						<ol> 
 							<li> Download <a href=https://www.r-project.org target=_blank>R</a> and <a href=https://www.rstudio.com target=_blank>RStudio</a>, which are both free programs. </li>
 							<li> Click <a href=https://github.com/mfinsaas/jnthreedimint/blob/master/1-FunctionCode_LivePlot.R target=_blank>here</a> to access the function code for producing a live plot and run it in RStudio. Any time you start a new R session you will need to re-run this code before running the input code (or you can save and source this file). </li>
