@@ -661,7 +661,7 @@ server <- function(input, output, session) {
 					3D space in combination with the regions of significance from the Johnson-Neyman technique. You can see an example of the type of plot produced <a href=http://rpubs.com/sbu_mfinsaas/Example target=_blank> here</a>. 
 					Please contact Megan Finsaas at megan.finsaas@gmail.com if you have questions or comments about the app. <br> <br>
 					For the best performance, please run the app in <b> Google Chrome</b>. <br> <br>
-					The plot is powered by Plotly (citation) and the Johnson-Neyman analysis is conducted using the <i> interactions </i> package (Long, 2019). The marginal effects plots are also produced using this package. <br> <br> 
+					The plot is powered by Plotly (Sievert, 2018) and the Johnson-Neyman analysis is conducted using the <i> interactions </i> package (Long, 2019). The marginal effects plots are also produced using this package. <br> <br> 
 					
 					
 			<h5> Uploading a Datafile (Raw Data Upload Method) </h5>
